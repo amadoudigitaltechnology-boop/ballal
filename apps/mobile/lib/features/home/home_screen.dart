@@ -398,7 +398,7 @@ class _ProDashboardState extends State<ProDashboard> {
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
                   child: DropdownButtonFormField<String>(
-                    value: availability,
+                    initialValue: availability,
                     decoration: InputDecoration(labelText: l.myAvailability),
                     items: [
                       for (final v in const ['available', 'busy', 'by_appointment', 'unavailable'])

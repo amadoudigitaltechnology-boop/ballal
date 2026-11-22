@@ -183,7 +183,7 @@ class _ServiceFormScreenState extends State<ServiceFormScreen> {
           FutureBuilder<List<Category>>(
             future: _cats,
             builder: (context, snap) => DropdownButtonFormField<String?>(
-              value: _categoryId,
+              initialValue: _categoryId,
               isExpanded: true,
               decoration: InputDecoration(labelText: l.category),
               items: [

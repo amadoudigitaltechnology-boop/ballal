@@ -13,10 +13,9 @@ import '../../data/repositories.dart';
 import '../../widgets/common.dart';
 
 class _DayHours {
-  _DayHours({this.enabled = false, this.opens = const TimeOfDay(hour: 8, minute: 0), this.closes = const TimeOfDay(hour: 18, minute: 0)});
-  bool enabled;
-  TimeOfDay opens;
-  TimeOfDay closes;
+  bool enabled = false;
+  TimeOfDay opens = const TimeOfDay(hour: 8, minute: 0);
+  TimeOfDay closes = const TimeOfDay(hour: 18, minute: 0);
 }
 
 String _hhmm(TimeOfDay t) => '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';

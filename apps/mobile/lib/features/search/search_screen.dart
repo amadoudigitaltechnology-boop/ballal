@@ -400,7 +400,7 @@ class _FilterSheetState extends State<FilterSheet> {
           builder: (context, snap) {
             final cats = snap.data ?? const <Category>[];
             return DropdownButtonFormField<String?>(
-              value: f.category?.id,
+              initialValue: f.category?.id,
               isExpanded: true,
               items: [
                 DropdownMenuItem(value: null, child: Text(l.allCategories)),
