@@ -1,0 +1,496 @@
+{
+  "@@locale": "fr",
+  "navHome": "Accueil",
+  "navSearch": "Recherche",
+  "navMessages": "Messages",
+  "navProfile": "Profil",
+  "newRequest": "Nouvelle demande",
+  "addService": "Ajouter un service",
+  "plusHintClient": "Choisissez un professionnel pour lui envoyer une demande.",
+  "onb1Title": "Trouvez facilement des services près de vous",
+  "onb1Text": "Plombiers, électriciens, coiffeurs, développeurs… Rapide, fiable et proche de vous.",
+  "onb2Title": "Discutez directement dans BALLAL",
+  "onb2Text": "Échangez avec les professionnels sans partager tout de suite votre numéro.",
+  "onb3Title": "Des avis vérifiés",
+  "onb3Text": "Seuls les clients ayant fait appel à un professionnel peuvent laisser un avis.",
+  "skip": "Passer",
+  "next": "Suivant",
+  "start": "Commencer",
+  "haveAccountLogin": "J'ai déjà un compte · Se connecter",
+  "welcomeTitle": "Bienvenue !",
+  "loginSubtitle": "Connectez-vous avec votre adresse e-mail.",
+  "phoneLabel": "Numéro de téléphone",
+  "phoneInvalid": "Numéro invalide. Exemple : 620 00 00 00",
+  "otpInfo": "Vous allez recevoir un code par e-mail. Pas de mot de passe à retenir.",
+  "termsNotice": "En continuant, vous acceptez les conditions d'utilisation et la politique de confidentialité de BALLAL.",
+  "otpTitle": "Code de vérification",
+  "verify": "Vérifier",
+  "resendIn": "Renvoyer le code dans {seconds} s",
+  "@resendIn": {
+    "placeholders": {
+      "seconds": {
+        "type": "String"
+      }
+    }
+  },
+  "resendCode": "Renvoyer le code",
+  "codeResent": "Un nouveau code a été envoyé.",
+  "otpTooManyAttempts": "Trop d'essais. Demandez un nouveau code.",
+  "setupTitle": "Votre profil",
+  "setupSubtitle": "Encore une étape avant de commencer.",
+  "fullName": "Nom complet",
+  "chooseProfile": "Vous êtes…",
+  "roleClientTitle": "Je cherche un service",
+  "roleClientSubtitle": "Trouver et contacter des professionnels",
+  "roleProTitle": "Je suis professionnel",
+  "roleProSubtitle": "Présenter mes services et recevoir des demandes",
+  "roleSwitchLater": "Vous pourrez activer l'autre mode plus tard avec le même compte.",
+  "acceptTerms": "J'accepte les conditions d'utilisation et la politique de confidentialité.",
+  "readTerms": "Lire les conditions",
+  "continueLabel": "Continuer",
+  "logout": "Se déconnecter",
+  "suspendedTitle": "Compte suspendu",
+  "suspendedText": "Votre compte a été suspendu par la modération. Contactez le support BALLAL pour faire un recours.",
+  "login": "Se connecter",
+  "notifications": "Notifications",
+  "chooseZone": "Choisir une zone",
+  "searchHint": "Rechercher un service, un métier…",
+  "bannerTitle": "Trouvez le meilleur service près de vous",
+  "nearMe": "Près de moi",
+  "categories": "Catégories",
+  "others": "Autres",
+  "recommendedForYou": "Recommandés pour vous",
+  "seeAll": "Voir tout",
+  "noRecoYet": "Pas encore de professionnels dans cette zone.\nEssayez une autre zone.",
+  "recentRequests": "Mes demandes récentes",
+  "helloName": "Bonjour {name}",
+  "@helloName": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "profileNotPublished": "Votre profil n'est pas encore visible. Complétez-le et publiez-le.",
+  "myAvailability": "Ma disponibilité",
+  "statNew": "Nouvelles demandes",
+  "statActive": "En cours",
+  "statDone": "Terminées",
+  "statViews": "Vues du profil",
+  "statFavorites": "Favoris",
+  "statRating": "Note moyenne",
+  "editProfile": "Modifier mon profil",
+  "myServices": "Mes services",
+  "receivedRequests": "Demandes reçues",
+  "noRequestsYetPro": "Aucune demande pour le moment. Un profil complet attire plus de clients.",
+  "availAvailable": "Disponible",
+  "availBusy": "Occupé",
+  "availUnavailable": "Indisponible",
+  "availByAppointment": "Sur rendez-vous",
+  "badgeIdentityVerified": "Identité vérifiée par BALLAL",
+  "badgeCompanyVerified": "Entreprise vérifiée par BALLAL",
+  "noReviewsYet": "Pas encore d'avis",
+  "reviewsCount": "({count} avis)",
+  "@reviewsCount": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "nearYou": "Proche de vous",
+  "clear": "Effacer",
+  "filters": "Filtres",
+  "availableNow": "Disponible maintenant",
+  "verifiedOnly": "Profils vérifiés",
+  "verifiedOnlyHint": "Identité ou entreprise vérifiée par BALLAL (pas une certification de compétences).",
+  "noResults": "Aucun résultat",
+  "noResultsHint": "Essayez un autre mot, une autre zone ou moins de filtres.",
+  "resetFilters": "Réinitialiser les filtres",
+  "gpsExplainTitle": "Trouver des professionnels près de vous",
+  "gpsExplainText": "BALLAL utilise votre position approximative uniquement pour trier les résultats par distance. Elle n'est ni affichée ni suivie en arrière-plan. Vous pouvez aussi choisir votre quartier manuellement.",
+  "notNow": "Pas maintenant",
+  "allow": "Autoriser",
+  "gpsDenied": "Localisation refusée. Choisissez votre zone manuellement dans les filtres.",
+  "gpsDisabled": "La localisation est désactivée sur votre téléphone.",
+  "gpsError": "Impossible d'obtenir votre position. Réessayez ou choisissez une zone.",
+  "removeFavorite": "Retirer des favoris",
+  "addFavorite": "Ajouter aux favoris",
+  "category": "Catégorie",
+  "allCategories": "Toutes les catégories",
+  "zone": "Zone",
+  "anyZone": "Toutes les zones",
+  "radiusKm": "Rayon : {km} km",
+  "@radiusKm": {
+    "placeholders": {
+      "km": {
+        "type": "String"
+      }
+    }
+  },
+  "minRating": "Note minimum",
+  "any": "Toutes",
+  "sortBy": "Trier par",
+  "sortRelevance": "Pertinence",
+  "sortRating": "Mieux notés",
+  "sortDistance": "Distance",
+  "reset": "Réinitialiser",
+  "apply": "Appliquer",
+  "allOfZone": "Tout {zone}",
+  "@allOfZone": {
+    "placeholders": {
+      "zone": {
+        "type": "String"
+      }
+    }
+  },
+  "noSubZones": "Aucune sous-zone.",
+  "activateClientTitle": "Activer le mode client ?",
+  "activateClientText": "Pour envoyer une demande, activez le mode client sur votre compte.",
+  "cancel": "Annuler",
+  "activate": "Activer",
+  "contactHidden": "Ce professionnel préfère être contacté par message.",
+  "reportSent": "Merci. Votre signalement a été transmis à la modération.",
+  "proNotFound": "Ce profil n'est pas disponible.",
+  "report": "Signaler",
+  "tabAbout": "À propos",
+  "tabReviews": "Avis",
+  "tabServices": "Services",
+  "sendRequest": "Envoyer une demande",
+  "call": "Appeler",
+  "message": "Message",
+  "typeCompany": "Entreprise",
+  "typeIndependent": "Indépendant",
+  "dayMon": "Lundi",
+  "dayTue": "Mardi",
+  "dayWed": "Mercredi",
+  "dayThu": "Jeudi",
+  "dayFri": "Vendredi",
+  "daySat": "Samedi",
+  "daySun": "Dimanche",
+  "presentation": "Présentation",
+  "verifications": "Vérifications",
+  "verifPhone": "Compte confirmé par code",
+  "verifIdentity": "Identité vérifiée",
+  "verifCompany": "Entreprise vérifiée",
+  "verifDisclaimer": "Une vérification confirme l'identité, pas les compétences. Consultez les avis.",
+  "experience": "Expérience",
+  "yearsExperience": "{years} ans d'expérience",
+  "@yearsExperience": {
+    "placeholders": {
+      "years": {
+        "type": "String"
+      }
+    }
+  },
+  "skills": "Compétences",
+  "serviceZones": "Zones d'intervention",
+  "indicativePrices": "Tarifs indicatifs",
+  "openingHours": "Horaires",
+  "languages": "Langues",
+  "portfolio": "Réalisations",
+  "reviewsExplain": "Les avis viennent uniquement de clients dont la demande est terminée.",
+  "verifiedClient": "Client vérifié",
+  "proReply": "Réponse du professionnel",
+  "noServices": "Aucun service publié",
+  "fromPrice": "À partir de {price}",
+  "@fromPrice": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "indicativeOnly": "Tarif indicatif, à confirmer avec le professionnel.",
+  "requestThisService": "Demander ce service",
+  "reasonSpam": "Spam ou publicité",
+  "reasonFraud": "Arnaque ou fraude",
+  "reasonHarassment": "Harcèlement ou insultes",
+  "reasonInappropriate": "Contenu inapproprié",
+  "reasonFakeProfile": "Faux profil",
+  "reasonOther": "Autre raison",
+  "reportMessagesShared": "Les {count} derniers messages reçus seront transmis à la modération avec votre signalement.",
+  "@reportMessagesShared": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "reportDetailsHint": "Précisions (facultatif)",
+  "send": "Envoyer",
+  "photoTooLarge": "Photo trop lourde.",
+  "stepService": "Service",
+  "stepDetails": "Détails",
+  "stepConfirm": "Confirmation",
+  "serviceRequest": "Demande de service",
+  "requestTo": "Demande à {name}",
+  "@requestTo": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "whatDoYouNeed": "De quoi avez-vous besoin ?",
+  "requestTitleHint": "Ex. : Réparer une fuite d'eau",
+  "description": "Description",
+  "describeNeed": "Décrivez votre besoin…",
+  "location": "Localisation",
+  "addressHint": "Repère (ex. : près de la mosquée)",
+  "addressHintPrivate": "Visible uniquement par le professionnel.",
+  "desiredDate": "Date souhaitée",
+  "optional": "Facultatif",
+  "budgetOptional": "Budget indicatif (facultatif)",
+  "photosOptional": "Photos (facultatif, 3 max)",
+  "remove": "Retirer",
+  "checkBeforeSend": "Vérifiez votre demande",
+  "professional": "Professionnel",
+  "need": "Besoin",
+  "budget": "Budget",
+  "photos": "Photos",
+  "noPaymentNotice": "BALLAL est gratuit. Le paiement se convient directement avec le professionnel, en dehors de l'application.",
+  "requestSentTitle": "Demande envoyée !",
+  "requestSentText": "Votre demande a bien été prise en compte. Vous serez notifié dès que le professionnel répond.",
+  "seeMyRequest": "Voir ma demande",
+  "backHome": "Retour à l'accueil",
+  "myRequests": "Mes demandes",
+  "tabOngoing": "En cours",
+  "tabClosed": "Terminées",
+  "noRequestsYet": "Vous n'avez pas encore envoyé de demande.",
+  "findPro": "Trouver un professionnel",
+  "statusPending": "En attente",
+  "statusNeedsInfo": "Précisions demandées",
+  "statusInDiscussion": "En discussion",
+  "statusAccepted": "Acceptée",
+  "statusDeclined": "Refusée",
+  "statusCancelled": "Annulée",
+  "statusCompleted": "Terminée",
+  "whatInfoNeeded": "Quelles précisions voulez-vous ?",
+  "optionalMessage": "Message (facultatif)",
+  "confirmAction": "Confirmer ?",
+  "confirm": "Confirmer",
+  "reviewThanks": "Merci pour votre avis !",
+  "accept": "Accepter",
+  "askDetails": "Demander des précisions",
+  "decline": "Refuser",
+  "markCompleted": "Marquer comme terminée",
+  "iAnswered": "J'ai répondu aux questions",
+  "leaveReview": "Laisser un avis",
+  "cancelRequest": "Annuler la demande",
+  "discuss": "Discuter",
+  "requestDetail": "Détail de la demande",
+  "notFound": "Introuvable",
+  "fromClient": "De {name}",
+  "@fromClient": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "toPro": "À {name}",
+  "@toPro": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "budgetValue": "Budget : {amount}",
+  "@budgetValue": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "sentOn": "Envoyée le {date}",
+  "@sentOn": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "history": "Historique",
+  "rateService": "Notez la prestation",
+  "reviewHint": "Votre avis aide les autres clients (facultatif)",
+  "publishReview": "Publier l'avis",
+  "loginToChat": "Connectez-vous pour discuter avec les professionnels.",
+  "searchConversation": "Rechercher une discussion…",
+  "noConversations": "Aucune discussion",
+  "noConversationsHint": "Contactez un professionnel depuis son profil.",
+  "newConversation": "Nouvelle discussion",
+  "micDenied": "Autorisez le micro pour envoyer un message vocal.",
+  "blockTitle": "Bloquer {name} ?",
+  "@blockTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "blockText": "Vous ne recevrez plus de messages ni de demandes de cette personne.",
+  "block": "Bloquer",
+  "seeProfile": "Voir le profil",
+  "seeRequest": "Voir la demande",
+  "unblock": "Débloquer",
+  "reconnecting": "Connexion perdue. Reconnexion…",
+  "chatEmptyTitle": "Démarrez la discussion",
+  "chatEmptyText": "Présentez votre besoin poliment et clairement.",
+  "youBlocked": "Vous avez bloqué cette personne.",
+  "recording": "Enregistrement",
+  "addPhoto": "Envoyer une photo",
+  "camera": "Appareil photo",
+  "gallery": "Galerie",
+  "writeMessage": "Écrire un message…",
+  "voiceMessage": "Message vocal",
+  "sending": "Envoi en cours",
+  "read": "Lu",
+  "sent": "Envoyé",
+  "tapToRetry": "Échec · touchez pour renvoyer  ",
+  "myFavorites": "Mes favoris",
+  "noFavorites": "Aucun favori",
+  "noFavoritesHint": "Touchez le cœur sur un profil pour le retrouver ici.",
+  "markAllRead": "Tout marquer comme lu",
+  "tabAll": "Toutes",
+  "tabActivity": "Activités",
+  "noNotifications": "Aucune notification",
+  "guestTitle": "Bienvenue sur BALLAL",
+  "guestText": "Connectez-vous pour envoyer des demandes, discuter et gérer vos favoris.",
+  "about": "À propos",
+  "logoutConfirm": "Se déconnecter de BALLAL ?",
+  "changePhoto": "Changer la photo",
+  "proMode": "Mode professionnel",
+  "proModeOn": "Vous voyez votre espace professionnel.",
+  "proModeOff": "Vous voyez l'espace client.",
+  "becomeProText": "Vous proposez des services ? Créez votre profil professionnel gratuitement.",
+  "becomePro": "Devenir pro",
+  "myProProfile": "Mon profil professionnel",
+  "seePublicProfile": "Voir mon profil public",
+  "settings": "Paramètres",
+  "prefMessages": "Nouveaux messages",
+  "prefRequests": "Demandes et réponses",
+  "prefAccount": "Activité du compte et avis",
+  "prefProduct": "Nouveautés BALLAL",
+  "privacy": "Confidentialité",
+  "prefPersonalization": "Recommandations personnalisées",
+  "prefPersonalizationHint": "Utilise vos favoris et vos demandes pour suggérer des professionnels. Jamais vos messages.",
+  "language": "Langue",
+  "languageFrOnly": "Français (Pular, Soussou, Malinké et anglais bientôt)",
+  "account": "Compte",
+  "deleteAccount": "Supprimer mon compte",
+  "deleteAccountText": "Votre profil sera retiré et vos données personnelles supprimées. Cette action est définitive.",
+  "delete": "Supprimer",
+  "aboutTagline": "Une plateforme de mise en relation entre clients, professionnels et entreprises.\nUne marque d'Amadou Technology.",
+  "howItWorks": "Comment ça marche",
+  "howItWorksText": "1. Recherchez un professionnel par métier ou par zone.\n2. Consultez son profil et ses avis.\n3. Envoyez une demande ou discutez avec lui.\n4. Après la prestation, laissez un avis.",
+  "freeTitle": "100 % gratuit",
+  "freeText": "BALLAL ne prend aucune commission et ne traite aucun paiement. Vous convenez du prix directement avec le professionnel.",
+  "privacyText": "Vos messages ne sont lisibles que par les participants. Votre adresse exacte n'est jamais publiée. La localisation GPS est facultative.",
+  "termsTitle": "Conditions d'utilisation",
+  "termsText": "Les conditions complètes seront publiées avant le lancement public après validation juridique en Guinée.",
+  "contactTitle": "Contact",
+  "contactText": "Amadou Technology · Conakry, Guinée",
+  "back": "Retour",
+  "chooseTrades": "Choisir mes métiers",
+  "maxTrades": "5 métiers maximum",
+  "ok": "OK",
+  "errProfileIncomplete": "Profil incomplet : nom, métier principal, zone et au moins un métier sont nécessaires pour publier.",
+  "hoursInvalid": "L'heure de fermeture doit être après l'heure d'ouverture.",
+  "saved": "Enregistré",
+  "addCover": "Ajouter une photo de couverture",
+  "tapToChangePhotos": "Touchez la couverture ou le logo pour les changer.",
+  "identity": "Identité",
+  "proDisplayName": "Nom affiché (vous ou votre entreprise)",
+  "required": "Obligatoire",
+  "mainTrade": "Métier principal",
+  "mainTradeHint": "Ex. : Plombier sanitaire",
+  "proDescriptionHint": "Votre expérience, ce que vous faites, votre façon de travailler…",
+  "experienceYears": "Années d'expérience",
+  "skillsHint": "Séparées par des virgules : fuite, chauffe-eau…",
+  "tradesAndCategories": "Métiers",
+  "tradesSelected": "{count} métier(s) choisi(s)",
+  "@tradesSelected": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "primaryTrade": "Métier principal",
+  "baseZone": "Zone principale",
+  "baseZoneHint": "Votre quartier ou commune de base (jamais votre adresse).",
+  "addZone": "Ajouter une zone",
+  "closed": "Fermé",
+  "priceHintExample": "Ex. : Déplacement à partir de 50 000 GNF",
+  "contacts": "Coordonnées",
+  "showPhone": "Afficher le bouton Appeler",
+  "showWhatsapp": "Afficher le bouton WhatsApp",
+  "contactPrivacyHint": "Vos numéros ne sont montrés qu'aux utilisateurs connectés, et seulement si vous l'autorisez.",
+  "visibility": "Visibilité",
+  "publishProfile": "Publier mon profil",
+  "publishedHint": "Votre profil apparaît dans la recherche.",
+  "unpublishedHint": "Votre profil est masqué.",
+  "save": "Enregistrer",
+  "noServicesHint": "Ajoutez vos prestations pour que les clients sachent ce que vous proposez.",
+  "published": "Publié",
+  "draft": "Brouillon",
+  "edit": "Modifier",
+  "archive": "Archiver",
+  "priceRangeInvalid": "Le prix maximum doit être supérieur au prix minimum.",
+  "editService": "Modifier le service",
+  "serviceTitle": "Nom du service",
+  "serviceTitleHint": "Ex. : Installation sanitaire",
+  "none": "Aucune",
+  "priceFrom": "Prix min.",
+  "priceTo": "Prix max.",
+  "priceUnit": "Unité",
+  "priceUnitHint": "Ex. : par intervention",
+  "duration": "Durée indicative",
+  "durationHint": "Ex. : 2 heures",
+  "publishService": "Publier ce service",
+  "errRateLimited": "Trop d'actions en peu de temps. Patientez un instant.",
+  "errBlocked": "Cette conversation n'est plus possible.",
+  "errInvalidTransition": "Cette action n'est plus possible pour cette demande.",
+  "errAccountInactive": "Votre compte n'est pas actif.",
+  "errForbidden": "Action non autorisée.",
+  "errDuplicate": "C'est déjà fait.",
+  "errOtpInvalid": "Code incorrect ou expiré.",
+  "errAuth": "Connexion impossible. Réessayez.",
+  "errNetwork": "Pas de connexion Internet. Vérifiez votre réseau.",
+  "errGeneric": "Une erreur est survenue. Réessayez.",
+  "retry": "Réessayer",
+  "timeNow": "à l'instant",
+  "timeMinutes": "il y a {n} min",
+  "@timeMinutes": {
+    "placeholders": {
+      "n": {
+        "type": "String"
+      }
+    }
+  },
+  "timeHours": "il y a {n} h",
+  "@timeHours": {
+    "placeholders": {
+      "n": {
+        "type": "String"
+      }
+    }
+  },
+  "timeYesterday": "hier",
+  "receiveCode": "Recevoir le code",
+  "emailLabel": "Adresse e-mail",
+  "emailInvalid": "Adresse e-mail invalide. Exemple : nom@gmail.com",
+  "otpSubtitleEmail": "Entrez le code reçu par e-mail à {email}.",
+  "@otpSubtitleEmail": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "checkSpam": "Pas reçu ? Regardez dans les spams ou « Promotions ».",
+  "changeEmail": "Modifier l'adresse e-mail"
+}

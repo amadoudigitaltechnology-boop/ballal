@@ -1,0 +1,16 @@
+# Secrets
+apps/mobile/env/prod.json
+!apps/mobile/env/*.example
+.env
+supabase/.env
+
+# Flutter
+apps/mobile/.dart_tool/
+apps/mobile/build/
+apps/mobile/.flutter-plugins*
+apps/mobile/lib/l10n/gen/
+apps/mobile/pubspec.lock
+
+# Supabase local
+supabase/.temp/
+supabase/.branches/

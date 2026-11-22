@@ -1,0 +1,5 @@
+{
+  "SUPABASE_URL": "https://VOTRE-PROJET.supabase.co",
+  "SUPABASE_ANON_KEY": "votre-clé-anon-publique",
+  "TERMS_VERSION": "2026-11"
+}

@@ -1,0 +1,48 @@
+# Génère l'APK Android de BALLAL sur les serveurs GitHub (gratuit).
+# La configuration publique (URL + clé anon) est dans apps/mobile/env/dev.json.
+name: Build APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/mobile
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Générer les dossiers Android
+        run: |
+          flutter create --org com.amadoutechnology --project-name ballal --platforms android .
+          python3 tool/setup_platforms.py || true
+
+      - run: flutter pub get
+      - run: flutter gen-l10n
+      - name: Analyse (erreurs bloquantes uniquement)
+        run: flutter analyze --no-fatal-infos --no-fatal-warnings lib test
+      - name: Tests
+        run: flutter test
+        continue-on-error: true
+
+      - name: Construire l'APK
+        run: flutter build apk --release --dart-define-from-file=env/dev.json
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ballal-apk
+          path: apps/mobile/build/app/outputs/flutter-apk/app-release.apk
