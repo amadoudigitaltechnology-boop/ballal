@@ -19,6 +19,28 @@ class HomeScreen extends StatelessWidget {
   Widget build(BuildContext context) => const ClientHome();
 }
 
+class _Bell extends StatelessWidget {
+  const _Bell();
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: Unread.instance,
+      builder: (context, _) => IconButton(
+        tooltip: context.l10n.notifications,
+        onPressed: () {
+          if (requireAuth(context)) context.push('/notifications');
+        },
+        icon: Badge(
+          isLabelVisible: Unread.instance.notifications > 0,
+          label: Text('${Unread.instance.notifications}'),
+          child: const Icon(Icons.notifications_none_rounded, size: 28),
+        ),
+      ),
+    );
+  }
+}
+
 /// Icône engrenage en haut à droite → Paramètres.
 class _Gear extends StatelessWidget {
   const _Gear();
