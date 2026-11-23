@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Administration · BALLAL</title>
+<style>
+:root{--p:#1A56DB;--d:#0B2A6F;--a:#FF7A1A;--bg:#F6F8FC;--m:#64748B;--b:#E2E8F0;--ok:#16A34A;--warn:#F59E0B;--ko:#DC2626;--soft:#E8F0FF}
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:#0F172A}
+button,input,select,textarea{font:inherit}
+.hidden{display:none!important}
+/* Connexion */
+#login{min-height:100vh;display:grid;place-items:center;padding:20px}
+.box{background:#fff;border-radius:22px;padding:30px;width:100%;max-width:400px;box-shadow:0 10px 30px rgba(26,86,219,.08)}
+.box img{height:40px;margin-bottom:14px}
+h1{margin:0 0 4px;color:var(--d);font-size:24px}
+.muted{color:var(--m);font-size:14px}
+input,select,textarea{width:100%;padding:13px 15px;border-radius:14px;border:1.5px solid transparent;background:#F0F3F9;outline:none;transition:border .15s}
+input:focus,textarea:focus,select:focus{border-color:var(--p)}
+.btn{border:0;border-radius:999px;padding:12px 18px;font-weight:700;cursor:pointer;background:var(--p);color:#fff;transition:transform .1s,opacity .15s}
+.btn:active{transform:scale(.97)}.btn:disabled{opacity:.5;cursor:default}
+.btn.sm{padding:7px 12px;font-size:13px}.btn.ghost{background:var(--soft);color:var(--d)}.btn.ok{background:var(--ok)}.btn.ko{background:var(--ko)}.btn.or{background:var(--a)}
+.err{color:var(--ko);font-size:13px;min-height:18px;margin-top:8px}
+/* Mise en page */
+header{background:#fff;border-bottom:1px solid var(--b);display:flex;align-items:center;gap:18px;padding:10px 20px;position:sticky;top:0;z-index:5}
+header img{height:30px}
+nav{display:flex;gap:4px;flex-wrap:wrap;flex:1}
+nav button{border:0;background:none;padding:9px 14px;border-radius:999px;font-weight:600;color:var(--m);cursor:pointer;position:relative}
+nav button.on{background:var(--soft);color:var(--p)}
+nav .count{background:var(--ko);color:#fff;border-radius:999px;font-size:11px;padding:1px 6px;margin-left:4px}
+main{max-width:1150px;margin:0 auto;padding:22px 18px 60px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px}
+.stat{background:#fff;border-radius:18px;padding:18px;box-shadow:0 6px 18px rgba(26,86,219,.05);animation:up .35s ease both}
+.stat b{display:block;font-size:30px;color:var(--d)}
+.stat span{color:var(--m);font-size:13px}
+.card{background:#fff;border-radius:18px;padding:16px 18px;box-shadow:0 6px 18px rgba(26,86,219,.05);margin-bottom:12px;animation:up .3s ease both}
+.row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.tag{display:inline-block;padding:3px 9px;border-radius:999px;font-size:12px;font-weight:700;background:var(--soft);color:var(--p)}
+.tag.ok{background:#DCFCE7;color:var(--ok)}.tag.ko{background:#FEE2E2;color:var(--ko)}.tag.warn{background:#FEF3C7;color:#B45309}.tag.or{background:#FFEDD5;color:#C2410C}
+.doc{max-width:100%;max-height:340px;border-radius:12px;border:1px solid var(--b);cursor:zoom-in}
+table{width:100%;border-collapse:collapse;background:#fff;border-radius:18px;overflow:hidden;box-shadow:0 6px 18px rgba(26,86,219,.05)}
+th,td{text-align:left;padding:11px 12px;border-bottom:1px solid var(--b);font-size:14px;vertical-align:top}
+th{background:#F8FAFF;color:var(--m);font-size:12px;text-transform:uppercase;letter-spacing:.4px}
+tr:hover td{background:#FAFCFF}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#0F172A;color:#fff;padding:11px 18px;border-radius:12px;font-size:14px;opacity:0;transition:opacity .2s;pointer-events:none}
+.toast.on{opacity:1}
+@keyframes up{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@media(max-width:700px){table,thead,tbody,tr,td,th{display:block}thead{display:none}td{border:0;padding:4px 12px}tr{border-bottom:1px solid var(--b);padding:8px 0}}
+</style>
+</head>
+<body>
+<section id="login">
+  <div class="box">
+    <img src="../logo.png" alt="BALLAL">
+    <h1>Administration</h1>
+    <p class="muted">Réservé à l'équipe BALLAL. Connexion par code reçu par e-mail.</p>
+    <div id="step-email">
+      <input id="email" type="email" placeholder="Adresse e-mail" autocomplete="email">
+      <div style="height:12px"></div>
+      <button class="btn" style="width:100%" id="send">Recevoir le code</button>
+    </div>
+    <div id="step-code" class="hidden">
+      <input id="code" inputmode="numeric" maxlength="8" placeholder="Code reçu par e-mail" autocomplete="one-time-code">
+      <div style="height:12px"></div>
+      <button class="btn" style="width:100%" id="verify">Se connecter</button>
+    </div>
+    <div class="err" id="login-err"></div>
+  </div>
+</section>
+
+<section id="app" class="hidden">
+  <header>
+    <img src="../logo.png" alt="BALLAL">
+    <nav id="tabs">
+      <button data-tab="dash" class="on">Tableau de bord</button>
+      <button data-tab="verif">Vérifications <span class="count hidden" id="c-verif"></span></button>
+      <button data-tab="reports">Signalements <span class="count hidden" id="c-reports"></span></button>
+      <button data-tab="users">Utilisateurs</button>
+    </nav>
+    <button class="btn sm ghost" id="logout">Déconnexion</button>
+  </header>
+  <main>
+    <div id="tab-dash"></div>
+    <div id="tab-verif" class="hidden"></div>
+    <div id="tab-reports" class="hidden"></div>
+    <div id="tab-users" class="hidden">
+      <div class="row" style="margin-bottom:14px"><input id="q" placeholder="Rechercher un nom, un e-mail, une entreprise…" style="flex:1"><button class="btn" id="search">Rechercher</button></div>
+      <div id="users"></div>
+    </div>
+  </main>
+</section>
+<div class="toast" id="toast"></div>
+
+<script type="module">
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+// Clé publique (« anon ») : elle est faite pour être publique ; la sécurité est assurée côté serveur
+// (chaque fonction d'administration vérifie le rôle de la personne connectée).
+const sb = createClient('https://lpoetkfxmaiqxoanhpum.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxwb2V0a2Z4bWFpcXhvYW5ocHVtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTUyOTgxNjUsImV4cCI6MjExMDg3NDE2NX0.tdSg4Pg6M2ALa4Pr_23hOfHVngIlwpQo62vZ1VROpO0');
+
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const date = (d) => d ? new Date(d).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' }) : '–';
+const toast = (m) => { const t = $('toast'); t.textContent = m; t.classList.add('on'); setTimeout(() => t.classList.remove('on'), 2600); };
+const friendly = (e) => (e?.message || String(e)).includes('forbidden') ? "Action réservée aux administrateurs." : (e?.message || String(e));
+
+// ───── Connexion ─────
+let email = '';
+$('send').onclick = async () => {
+  email = $('email').value.trim().toLowerCase();
+  if (!/^\S+@\S+\.\S+$/.test(email)) return ($('login-err').textContent = 'Adresse e-mail invalide.');
+  $('send').disabled = true; $('login-err').textContent = '';
+  const { error } = await sb.auth.signInWithOtp({ email, options: { shouldCreateUser: false } });
+  $('send').disabled = false;
+  if (error) return ($('login-err').textContent = error.message);
+  $('step-email').classList.add('hidden'); $('step-code').classList.remove('hidden'); $('code').focus();
+};
+$('verify').onclick = async () => {
+  $('verify').disabled = true; $('login-err').textContent = '';
+  const { error } = await sb.auth.verifyOtp({ email, token: $('code').value.trim(), type: 'email' });
+  $('verify').disabled = false;
+  if (error) return ($('login-err').textContent = 'Code incorrect ou expiré.');
+  start();
+};
+$('logout').onclick = async () => { await sb.auth.signOut(); location.reload(); };
+
+async function start() {
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) return;
+  const { data: staff } = await sb.rpc('is_staff');
+  if (!staff) {
+    $('login-err').textContent = "Ce compte n'a pas accès à l'administration.";
+    await sb.auth.signOut();
+    return;
+  }
+  $('login').classList.add('hidden'); $('app').classList.remove('hidden');
+  loadDash();
+}
+
+// ───── Onglets ─────
+document.querySelectorAll('#tabs button').forEach((b) => b.onclick = () => {
+  document.querySelectorAll('#tabs button').forEach((x) => x.classList.toggle('on', x === b));
+  ['dash', 'verif', 'reports', 'users'].forEach((t) => $('tab-' + t).classList.toggle('hidden', t !== b.dataset.tab));
+  ({ dash: loadDash, verif: loadVerif, reports: loadReports, users: loadUsers })[b.dataset.tab]();
+});
+
+async function loadDash() {
+  const { data, error } = await sb.rpc('admin_stats');
+  if (error) return ($('tab-dash').innerHTML = `<p class="err">${esc(friendly(error))}</p>`);
+  const s = data;
+  const items = [
+    ['Utilisateurs', s.users], ['Nouveaux (7 j)', s.users_7d], ['Professionnels', s.pros], ['Pros publiés', s.pros_published],
+    ['Pros vérifiés', s.pros_verified], ['Mis en avant', s.featured], ['Premium', s.premium], ['Demandes', s.requests],
+    ['Demandes (7 j)', s.requests_7d], ['Messages (7 j)', s.messages_7d], ['Signalements ouverts', s.reports_open],
+    ['Vérifications en attente', s.verifications_pending],
+  ];
+  $('tab-dash').innerHTML = `<div class="grid">${items.map(([k, v], i) =>
+    `<div class="stat" style="animation-delay:${i * 30}ms"><b>${v ?? 0}</b><span>${k}</span></div>`).join('')}</div>`;
+  badge('c-verif', s.verifications_pending); badge('c-reports', s.reports_open);
+}
+function badge(id, n) { $(id).textContent = n; $(id).classList.toggle('hidden', !n); }
+
+// ───── Vérifications ─────
+async function loadVerif() {
+  const box = $('tab-verif');
+  box.innerHTML = '<p class="muted">Chargement…</p>';
+  const { data, error } = await sb.from('verification_documents')
+    .select('id, user_id, doc_type, storage_path, status, created_at, profiles!verification_documents_user_id_fkey(full_name)')
+    .eq('status', 'pending').order('created_at');
+  if (error) return (box.innerHTML = `<p class="err">${esc(friendly(error))}</p>`);
+  if (!data.length) return (box.innerHTML = '<div class="card">Aucune vérification en attente. ✅</div>');
+  box.innerHTML = '';
+  for (const d of data) {
+    const { data: signed } = await sb.storage.from('verification-docs').createSignedUrl(d.storage_path, 600);
+    const el = document.createElement('div');
+    el.className = 'card';
+    el.innerHTML = `<div class="row" style="justify-content:space-between">
+        <div><b>${esc(d.profiles?.full_name || 'Sans nom')}</b> · <span class="tag">${d.doc_type === 'identity' ? "Pièce d'identité" : "Document d'entreprise"}</span>
+        <div class="muted">Envoyé le ${date(d.created_at)}</div></div>
+        <div class="row"><button class="btn sm ok">Accepter</button><button class="btn sm ko">Refuser</button></div></div>
+      ${signed?.signedUrl ? `<p><a href="${signed.signedUrl}" target="_blank" rel="noopener"><img class="doc" src="${signed.signedUrl}" alt="Document"></a></p>` : '<p class="err">Document illisible</p>'}`;
+    const [ok, ko] = el.querySelectorAll('button');
+    ok.onclick = () => review(d.id, 'approved', null, el);
+    ko.onclick = () => { const r = prompt('Motif du refus (envoyé au professionnel) :', 'Photo floue ou incomplète'); if (r !== null) review(d.id, 'rejected', r, el); };
+    box.appendChild(el);
+  }
+}
+async function review(id, status, reason, el) {
+  const { error } = await sb.rpc('admin_review_verification', { p_doc: id, p_status: status, p_reason: reason });
+  if (error) return toast(friendly(error));
+  el.remove(); toast(status === 'approved' ? 'Profil vérifié ✅' : 'Refus envoyé'); loadDash();
+}
+
+// ───── Signalements ─────
+const reasons = { spam: 'Spam', fraud: 'Arnaque', harassment: 'Harcèlement', inappropriate: 'Contenu inapproprié', fake_profile: 'Faux profil', other: 'Autre' };
+const targets = { user: 'Utilisateur', professional: 'Professionnel', service: 'Service', review: 'Avis', message: 'Message', conversation: 'Conversation' };
+async function loadReports() {
+  const box = $('tab-reports');
+  box.innerHTML = '<p class="muted">Chargement…</p>';
+  const { data, error } = await sb.from('reports')
+    .select('id, target_type, target_id, reason, description, status, created_at, profiles!reports_reporter_id_fkey(full_name)')
+    .in('status', ['open', 'in_review']).order('created_at');
+  if (error) return (box.innerHTML = `<p class="err">${esc(friendly(error))}</p>`);
+  if (!data.length) return (box.innerHTML = '<div class="card">Aucun signalement ouvert. ✅</div>');
+  box.innerHTML = '';
+  data.forEach((r, i) => {
+    const el = document.createElement('div');
+    el.className = 'card'; el.style.animationDelay = i * 30 + 'ms';
+    el.innerHTML = `<div class="row" style="justify-content:space-between">
+      <div><span class="tag ko">${esc(reasons[r.reason] || r.reason)}</span> <span class="tag">${esc(targets[r.target_type] || r.target_type)}</span>
+      <div style="margin-top:6px">${esc(r.description || '(sans description)')}</div>
+      <div class="muted">Par ${esc(r.profiles?.full_name || '?')} · ${date(r.created_at)}${r.target_type === 'professional' ? ` · <a href="#" data-pro="${r.target_id}">voir le pro</a>` : ''}</div></div>
+      <div class="row"><button class="btn sm ok">Traité</button><button class="btn sm ghost">Rejeter</button>
+      ${['professional', 'user'].includes(r.target_type) ? '<button class="btn sm ko">Suspendre le compte</button>' : ''}</div></div>`;
+    const btns = el.querySelectorAll('button');
+    btns[0].onclick = () => resolve(r.id, 'resolved', el);
+    btns[1].onclick = () => resolve(r.id, 'rejected', el);
+    if (btns[2]) btns[2].onclick = async () => {
+      const why = prompt('Motif de la suspension :', reasons[r.reason] || ''); if (why === null) return;
+      const { error } = await sb.rpc('admin_set_user_status', { p_user: r.target_id, p_status: 'suspended', p_reason: why });
+      if (error) return toast(friendly(error));
+      resolve(r.id, 'resolved', el, 'Compte suspendu');
+    };
+    const link = el.querySelector('[data-pro]');
+    if (link) link.onclick = (e) => { e.preventDefault(); document.querySelector('[data-tab=users]').click(); };
+    box.appendChild(el);
+  });
+}
+async function resolve(id, status, el, note) {
+  const { error } = await sb.rpc('admin_resolve_report', { p_report: id, p_status: status, p_resolution: note || (status === 'resolved' ? 'Traité' : 'Rejeté') });
+  if (error) return toast(friendly(error));
+  el.remove(); toast('Signalement mis à jour'); loadDash();
+}
+
+// ───── Utilisateurs ─────
+$('search').onclick = () => loadUsers();
+$('q').onkeydown = (e) => { if (e.key === 'Enter') loadUsers(); };
+const roleNames = { client: 'Client', professional: 'Pro', moderator: 'Modérateur', admin: 'Admin', super_admin: 'Super admin' };
+async function loadUsers() {
+  const box = $('users');
+  box.innerHTML = '<p class="muted">Chargement…</p>';
+  const { data, error } = await sb.rpc('admin_list_users', { p_search: $('q').value || null, p_limit: 100 });
+  if (error) return (box.innerHTML = `<p class="err">${esc(friendly(error))}</p>`);
+  if (!data.length) return (box.innerHTML = '<div class="card">Aucun résultat.</div>');
+  const now = new Date();
+  box.innerHTML = `<table><thead><tr><th>Utilisateur</th><th>Rôles</th><th>Professionnel</th><th>Options</th><th>Actions</th></tr></thead><tbody>${
+    data.map((u) => {
+      const feat = u.featured_until && new Date(u.featured_until) > now;
+      const prem = u.premium_until && new Date(u.premium_until) > now;
+      return `<tr data-id="${u.id}">
+        <td><b>${esc(u.full_name || 'Sans nom')}</b><div class="muted">${esc(u.email || '')}</div><div class="muted">Inscrit le ${date(u.created_at)}</div>
+          ${u.status !== 'active' ? `<span class="tag ko">${u.status === 'suspended' ? 'Suspendu' : 'Supprimé'}</span>` : ''}</td>
+        <td>${(u.roles || []).map((r) => `<span class="tag">${roleNames[r] || r}</span>`).join(' ')}</td>
+        <td>${u.pro_name ? `${esc(u.pro_name)}<div>${u.is_published ? '<span class="tag ok">Publié</span>' : '<span class="tag warn">Non publié</span>'} ${u.identity_verified ? '<span class="tag ok">Vérifié</span>' : ''}</div>` : '<span class="muted">–</span>'}</td>
+        <td>${feat ? `<span class="tag or">Mis en avant → ${date(u.featured_until)}</span><br>` : ''}${prem ? `<span class="tag warn">Premium → ${date(u.premium_until)}</span>` : ''}${!feat && !prem ? '<span class="muted">–</span>' : ''}</td>
+        <td><div class="row">
+          ${u.pro_name ? `<button class="btn sm or" data-a="feat">Mettre en avant</button><button class="btn sm" data-a="prem">Premium</button>
+          ${feat || prem ? '<button class="btn sm ghost" data-a="unboost">Retirer options</button>' : ''}` : ''}
+          ${u.status === 'active' ? '<button class="btn sm ko" data-a="suspend">Suspendre</button>' : '<button class="btn sm ok" data-a="activate">Réactiver</button>'}
+        </div></td></tr>`;
+    }).join('')}</tbody></table>`;
+  box.querySelectorAll('button[data-a]').forEach((b) => b.onclick = () => userAction(b.closest('tr').dataset.id, b.dataset.a));
+}
+async function userAction(id, a) {
+  let res;
+  if (a === 'feat' || a === 'prem') {
+    const days = parseInt(prompt(`Nombre de jours ${a === 'feat' ? 'de mise en avant' : 'de Premium'} :`, '30'), 10);
+    if (!days || days < 1) return;
+    res = await sb.rpc('admin_set_pro_boost', a === 'feat' ? { p_pro: id, p_featured_days: days } : { p_pro: id, p_premium_days: days });
+  } else if (a === 'unboost') {
+    if (!confirm('Retirer la mise en avant et le Premium ?')) return;
+    res = await sb.rpc('admin_set_pro_boost', { p_pro: id, p_featured_days: 0, p_premium_days: 0 });
+  } else if (a === 'suspend') {
+    const why = prompt('Motif de la suspension :'); if (why === null) return;
+    res = await sb.rpc('admin_set_user_status', { p_user: id, p_status: 'suspended', p_reason: why });
+  } else if (a === 'activate') {
+    res = await sb.rpc('admin_set_user_status', { p_user: id, p_status: 'active', p_reason: 'Réactivation' });
+  }
+  if (res?.error) return toast(friendly(res.error));
+  toast('Enregistré ✅'); loadUsers(); loadDash();
+}
+
+start();
+</script>
+</body>
+</html>
