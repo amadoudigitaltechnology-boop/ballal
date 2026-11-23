@@ -139,7 +139,7 @@ class _ProProfileScreenState extends State<ProProfileScreen> {
               headerSliverBuilder: (context, _) => [
                 SliverAppBar(
                   pinned: true,
-                  expandedHeight: 200,
+                  expandedHeight: 190,
                   backgroundColor: BallalColors.primaryDark,
                   foregroundColor: Colors.white,
                   actions: [
@@ -245,29 +245,68 @@ class _Header extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = context.l10n;
-    return BallalCard(
-      margin: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-      child: Row(children: [
-        ProPhoto(path: pro.logoPath, name: pro.displayName, width: 76, height: 76, radius: 38),
-        const SizedBox(width: 14),
-        Expanded(
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Row(children: [
-              Flexible(
-                child: Text(pro.displayName, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
-              ),
+    String compact(int n) => n >= 1000 ? '${(n / 1000).toStringAsFixed(1)}k' : '$n';
+    Widget stat(String value, String label) => Expanded(
+          child: Column(children: [
+            Text(value, style: displayStyle(18, color: BallalColors.text)),
+            const SizedBox(height: 2),
+            Text(label, style: const TextStyle(fontSize: 12, color: BallalColors.muted)),
+          ]),
+        );
+    return Transform.translate(
+      offset: const Offset(0, -46),
+      child: Column(children: [
+        // Photo qui chevauche la couverture (maquette)
+        FadeSlideIn(
+          child: Container(
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white, width: 4),
+              boxShadow: [BoxShadow(color: BallalColors.primary.withValues(alpha: 0.2), blurRadius: 18, offset: const Offset(0, 8))],
+            ),
+            child: ProPhoto(path: pro.logoPath, name: pro.displayName, width: 96, height: 96, radius: 48),
+          ),
+        ),
+        const SizedBox(height: 8),
+        if (pro.identityVerified || pro.companyVerified)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+            decoration: BoxDecoration(color: BallalColors.primarySoft, borderRadius: BorderRadius.circular(20)),
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              const Icon(Icons.verified_rounded, size: 15, color: BallalColors.primary),
               const SizedBox(width: 4),
-              VerifiedBadge(identity: pro.identityVerified, company: pro.companyVerified),
+              Text(l.verifiedLabel, style: const TextStyle(color: BallalColors.primary, fontWeight: FontWeight.w800, fontSize: 12)),
             ]),
-            Text(pro.headline, style: const TextStyle(color: BallalColors.muted)),
-            const SizedBox(height: 6),
-            RatingRow(rating: pro.ratingAvg, count: pro.ratingCount),
-            const SizedBox(height: 6),
-            Wrap(spacing: 12, children: [
-              AvailabilityTag(value: pro.availability),
-              Text(pro.proType == 'company' ? l.typeCompany : l.typeIndependent,
-                  style: const TextStyle(fontSize: 12, color: BallalColors.muted)),
-            ]),
+          ),
+        const SizedBox(height: 6),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Text(pro.displayName, textAlign: TextAlign.center, style: displayStyle(21, color: BallalColors.text)),
+        ),
+        const SizedBox(height: 2),
+        Text(pro.headline, textAlign: TextAlign.center, style: const TextStyle(color: BallalColors.muted)),
+        if (pro.locationName != null) ...[
+          const SizedBox(height: 4),
+          Row(mainAxisSize: MainAxisSize.min, children: [
+            const Icon(Icons.place_rounded, size: 16, color: BallalColors.primary),
+            const SizedBox(width: 2),
+            Text(pro.locationName!, style: const TextStyle(fontWeight: FontWeight.w600)),
+          ]),
+        ],
+        const SizedBox(height: 6),
+        RatingRow(rating: pro.ratingAvg, count: pro.ratingCount),
+        const SizedBox(height: 6),
+        AvailabilityTag(value: pro.availability),
+        const SizedBox(height: 14),
+        BallalCard(
+          margin: const EdgeInsets.symmetric(horizontal: 16),
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          child: Row(children: [
+            stat('${pro.ratingCount}', l.statReviews),
+            Container(width: 1, height: 30, color: BallalColors.border),
+            stat(compact(pro.profileViews), l.statViews),
+            Container(width: 1, height: 30, color: BallalColors.border),
+            stat(pro.experienceYears == null ? '–' : '${pro.experienceYears} ans', l.statExperience),
           ]),
         ),
       ]),

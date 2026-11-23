@@ -11,7 +11,7 @@ Future<void> showAccountCreated(BuildContext context, String firstName) {
   return showGeneralDialog<void>(
     context: context,
     barrierDismissible: false,
-    barrierColor: BallalColors.primaryDark.withValues(alpha: 0.55),
+    barrierColor: Colors.white,
     transitionDuration: const Duration(milliseconds: 380),
     pageBuilder: (ctx, _, __) => _AccountCreated(firstName: firstName),
     transitionBuilder: (_, a, __, child) => FadeTransition(
@@ -63,24 +63,20 @@ class _AccountCreatedState extends State<_AccountCreated> with SingleTickerProvi
         child: Container(
           margin: const EdgeInsets.all(32),
           padding: const EdgeInsets.fromLTRB(24, 28, 24, 20),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(32),
-            boxShadow: [BoxShadow(color: BallalColors.primary.withValues(alpha: 0.3), blurRadius: 40, offset: const Offset(0, 20))],
-          ),
+          color: Colors.white,
           child: Column(mainAxisSize: MainAxisSize.min, children: [
             SizedBox(
-              width: 160,
-              height: 160,
+              width: 220,
+              height: 220,
               child: AnimatedBuilder(animation: _c, builder: (_, __) => CustomPaint(painter: _SuccessPainter(_c.value))),
             ),
             const SizedBox(height: 10),
-            Text(l.accountCreatedTitle, textAlign: TextAlign.center, style: displayStyle(21, color: BallalColors.primaryDark)),
+            Text(l.accountCreatedTitle, textAlign: TextAlign.center, style: displayStyle(24, color: BallalColors.text)),
             const SizedBox(height: 8),
             Text(l.accountCreatedText(widget.firstName),
                 textAlign: TextAlign.center, style: const TextStyle(color: BallalColors.muted, height: 1.4)),
             const SizedBox(height: 20),
-            SizedBox(width: double.infinity, child: FilledButton(onPressed: _close, child: Text(l.continueLabel))),
+            SizedBox(width: double.infinity, child: FilledButton(onPressed: _close, child: Text(l.start))),
           ]),
         ),
       ),
@@ -121,18 +117,14 @@ class _SuccessPainter extends CustomPainter {
     // Cercle dégradé qui se dessine.
     final circle = Curves.easeOutCubic.transform((t / 0.45).clamp(0.0, 1.0));
     final rect = Rect.fromCircle(center: c, radius: r);
-    canvas.drawCircle(c, r, Paint()..color = BallalColors.primarySoft.withValues(alpha: circle));
-    canvas.drawArc(
-      rect,
-      -math.pi / 2,
-      2 * math.pi * circle,
-      false,
-      Paint()
-        ..shader = kBrandGradient.createShader(rect)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 7
-        ..strokeCap = StrokeCap.round,
-    );
+    // Disque vert plein (comme la maquette) + anneau clair
+    canvas.drawCircle(c, r * 1.18 * circle, Paint()..color = const Color(0xFFDCFCE7));
+    canvas.drawCircle(
+        c,
+        r * circle,
+        Paint()
+          ..shader = const LinearGradient(colors: [Color(0xFF34D399), Color(0xFF16A34A)], begin: Alignment.topLeft, end: Alignment.bottomRight)
+              .createShader(rect));
 
     // Coche qui se trace.
     final check = ((t - 0.4) / 0.4).clamp(0.0, 1.0);
@@ -145,9 +137,9 @@ class _SuccessPainter extends CustomPainter {
       canvas.drawPath(
         metric.extractPath(0, metric.length * Curves.easeOutCubic.transform(check)),
         Paint()
-          ..color = BallalColors.primary
+          ..color = Colors.white
           ..style = PaintingStyle.stroke
-          ..strokeWidth = 9
+          ..strokeWidth = 10
           ..strokeCap = StrokeCap.round
           ..strokeJoin = StrokeJoin.round,
       );
