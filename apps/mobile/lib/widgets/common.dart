@@ -312,7 +312,17 @@ class SectionHeader extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 20, 12, 8),
       child: Row(children: [
-        Expanded(child: Text(title, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700))),
+        Expanded(
+          child: Row(children: [
+            Container(
+              width: 4,
+              height: 18,
+              margin: const EdgeInsets.only(right: 8),
+              decoration: BoxDecoration(gradient: kBrandGradient, borderRadius: BorderRadius.circular(4)),
+            ),
+            Flexible(child: Text(title, style: displayStyle(17, weight: FontWeight.w700))),
+          ]),
+        ),
         if (action != null)
           TextButton(onPressed: onAction, child: Text(action!, style: const TextStyle(fontWeight: FontWeight.w600))),
       ]),
@@ -354,7 +364,8 @@ class ProListTile extends StatelessWidget {
             Row(children: [
               Flexible(
                 child: Text(pro.displayName,
-                    maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
+                    maxLines: 1, overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontFamily: kDisplayFont, fontWeight: FontWeight.w700, fontSize: 15, letterSpacing: -0.2)),
               ),
               const SizedBox(width: 4),
               VerifiedBadge(identity: pro.identityVerified, company: pro.companyVerified, size: 16),

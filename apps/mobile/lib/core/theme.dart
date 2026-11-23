@@ -7,7 +7,7 @@ class BallalColors {
   static const primarySoft = Color(0xFFE8F0FF);
   static const accent = Color(0xFFFF7A1A);
   static const accentSoft = Color(0xFFFFF1E6);
-  static const bg = Color(0xFFF6F8FC);
+  static const bg = Color(0xFFF3F6FD);
   static const field = Color(0xFFF0F3F9);
   static const surface = Colors.white;
   static const text = Color(0xFF0F172A);
@@ -19,7 +19,20 @@ class BallalColors {
   static const star = Color(0xFFF5A623);
 }
 
-const kRadius = 18.0;
+const kRadius = 20.0;
+const kDisplayFont = 'Sora';
+const kBodyFont = 'PlusJakartaSans';
+
+/// Style de titre « futuriste » réutilisable (Sora).
+TextStyle displayStyle(double size, {Color color = BallalColors.text, FontWeight weight = FontWeight.w800}) =>
+    TextStyle(fontFamily: kDisplayFont, fontSize: size, fontWeight: weight, color: color, letterSpacing: -0.5, height: 1.15);
+
+/// Dégradé signature BALLAL (bleu électrique → bleu nuit).
+const kBrandGradient = LinearGradient(
+  colors: [Color(0xFF2F6BFF), Color(0xFF1A56DB), Color(0xFF0B2A6F)],
+  begin: Alignment.topLeft,
+  end: Alignment.bottomRight,
+);
 
 ThemeData buildBallalTheme() {
   final scheme = ColorScheme.fromSeed(
@@ -33,6 +46,22 @@ ThemeData buildBallalTheme() {
     colorScheme: scheme,
     scaffoldBackgroundColor: BallalColors.bg,
     visualDensity: VisualDensity.standard,
+    fontFamily: kBodyFont,
+  );
+  // Titres en Sora (géométrique, futuriste), texte courant en Plus Jakarta Sans (très lisible).
+  TextStyle? head(TextStyle? t, {FontWeight w = FontWeight.w700, double ls = -0.3}) =>
+      t?.copyWith(fontFamily: kDisplayFont, fontWeight: w, letterSpacing: ls, color: BallalColors.text);
+  final tt = base.textTheme.apply(bodyColor: BallalColors.text, displayColor: BallalColors.text, fontFamily: kBodyFont);
+  final textTheme = tt.copyWith(
+    displayLarge: head(tt.displayLarge, w: FontWeight.w800, ls: -1),
+    displayMedium: head(tt.displayMedium, w: FontWeight.w800, ls: -0.8),
+    displaySmall: head(tt.displaySmall, w: FontWeight.w800, ls: -0.6),
+    headlineLarge: head(tt.headlineLarge, w: FontWeight.w800),
+    headlineMedium: head(tt.headlineMedium, w: FontWeight.w800),
+    headlineSmall: head(tt.headlineSmall),
+    titleLarge: head(tt.titleLarge),
+    titleMedium: tt.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+    labelLarge: tt.labelLarge?.copyWith(fontWeight: FontWeight.w700, letterSpacing: 0.2),
   );
   OutlineInputBorder border(Color c, [double w = 1]) => OutlineInputBorder(
         borderRadius: BorderRadius.circular(16),
@@ -45,9 +74,10 @@ ThemeData buildBallalTheme() {
       elevation: 0,
       scrolledUnderElevation: 0,
       centerTitle: true,
-      titleTextStyle: TextStyle(color: BallalColors.text, fontSize: 18, fontWeight: FontWeight.w700),
+      titleTextStyle: TextStyle(
+          fontFamily: kDisplayFont, color: BallalColors.text, fontSize: 18, fontWeight: FontWeight.w700, letterSpacing: -0.3),
     ),
-    textTheme: base.textTheme.apply(bodyColor: BallalColors.text, displayColor: BallalColors.text),
+    textTheme: textTheme,
     // Champs : fond gris doux, sans contour, contour bleu seulement quand on écrit.
     inputDecorationTheme: InputDecorationTheme(
       filled: true,

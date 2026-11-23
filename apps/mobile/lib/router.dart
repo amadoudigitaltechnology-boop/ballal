@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import 'core/session.dart';
+import 'core/transitions.dart';
 import 'data/models.dart';
 import 'features/account/account_screen.dart';
 import 'features/account/edit_pro_profile_screen.dart';
@@ -47,12 +48,12 @@ GoRouter buildRouter() {
     refreshListenable: Session.instance,
     redirect: _redirect,
     routes: [
-      GoRoute(path: '/splash', builder: (_, __) => const SplashScreen()),
-      GoRoute(path: '/welcome', builder: (_, __) => const OnboardingScreen()),
-      GoRoute(path: '/login', builder: (_, __) => const LoginScreen()),
-      GoRoute(path: '/otp', builder: (_, s) => OtpScreen(email: s.extra as String? ?? '')),
-      GoRoute(path: '/setup', builder: (_, __) => const SetupScreen()),
-      GoRoute(path: '/suspended', builder: (_, __) => const SuspendedScreen()),
+      GoRoute(path: '/splash', pageBuilder: (_, st) => motionPage(st, const SplashScreen(), Motion.fade)),
+      GoRoute(path: '/welcome', pageBuilder: (_, st) => motionPage(st, const OnboardingScreen(), Motion.fade)),
+      GoRoute(path: '/login', pageBuilder: (_, st) => motionPage(st, const LoginScreen(), Motion.depth)),
+      GoRoute(path: '/otp', pageBuilder: (_, s) => motionPage(s, OtpScreen(email: s.extra as String? ?? ''), Motion.slide)),
+      GoRoute(path: '/setup', pageBuilder: (_, st) => motionPage(st, const SetupScreen(), Motion.depth)),
+      GoRoute(path: '/suspended', pageBuilder: (_, st) => motionPage(st, const SuspendedScreen(), Motion.fade)),
       StatefulShellRoute.indexedStack(
         builder: (_, __, shell) => MainShell(shell: shell),
         branches: [
@@ -72,32 +73,36 @@ GoRouter buildRouter() {
           StatefulShellBranch(routes: [GoRoute(path: '/account', builder: (_, __) => const AccountScreen())]),
         ],
       ),
-      GoRoute(path: '/pro/:id', builder: (_, s) => ProProfileScreen(proId: s.pathParameters['id']!)),
+      GoRoute(path: '/pro/:id', pageBuilder: (_, s) => motionPage(s, ProProfileScreen(proId: s.pathParameters['id']!), Motion.zoom)),
       GoRoute(
         path: '/request/new',
-        builder: (_, s) {
+        pageBuilder: (_, s) {
           final extra = (s.extra as Map<String, dynamic>?) ?? const {};
-          return RequestFormScreen(
-            proId: extra['proId'] as String,
-            proName: extra['proName'] as String? ?? '',
-            service: extra['service'] as ProService?,
+          return motionPage(
+            s,
+            RequestFormScreen(
+              proId: extra['proId'] as String,
+              proName: extra['proName'] as String? ?? '',
+              service: extra['service'] as ProService?,
+            ),
+            Motion.sheet,
           );
         },
       ),
-      GoRoute(path: '/request/sent', builder: (_, s) => RequestSentScreen(requestId: s.extra as String?)),
-      GoRoute(path: '/requests', builder: (_, __) => const MyRequestsScreen()),
-      GoRoute(path: '/requests/:id', builder: (_, s) => RequestDetailScreen(requestId: s.pathParameters['id']!)),
-      GoRoute(path: '/chat/:id', builder: (_, s) => ChatScreen(conversationId: s.pathParameters['id']!)),
-      GoRoute(path: '/favorites', builder: (_, __) => const FavoritesScreen()),
-      GoRoute(path: '/notifications', builder: (_, __) => const NotificationsScreen()),
-      GoRoute(path: '/settings', builder: (_, __) => const SettingsScreen()),
-      GoRoute(path: '/verification', builder: (_, __) => const VerificationScreen()),
-      GoRoute(path: '/premium', builder: (_, __) => const PremiumScreen()),
-      GoRoute(path: '/pro-dashboard', builder: (_, __) => const ProDashboard()),
-      GoRoute(path: '/pro-edit', builder: (_, __) => const EditProProfileScreen()),
-      GoRoute(path: '/my-services', builder: (_, __) => const MyServicesScreen()),
-      GoRoute(path: '/my-services/edit', builder: (_, s) => ServiceFormScreen(service: s.extra as ProService?)),
-      GoRoute(path: '/about', builder: (_, __) => const AboutScreen()),
+      GoRoute(path: '/request/sent', pageBuilder: (_, s) => motionPage(s, RequestSentScreen(requestId: s.extra as String?), Motion.depth)),
+      GoRoute(path: '/requests', pageBuilder: (_, st) => motionPage(st, const MyRequestsScreen(), Motion.fadeThrough)),
+      GoRoute(path: '/requests/:id', pageBuilder: (_, s) => motionPage(s, RequestDetailScreen(requestId: s.pathParameters['id']!), Motion.slide)),
+      GoRoute(path: '/chat/:id', pageBuilder: (_, s) => motionPage(s, ChatScreen(conversationId: s.pathParameters['id']!), Motion.slide)),
+      GoRoute(path: '/favorites', pageBuilder: (_, st) => motionPage(st, const FavoritesScreen(), Motion.fadeThrough)),
+      GoRoute(path: '/notifications', pageBuilder: (_, st) => motionPage(st, const NotificationsScreen(), Motion.fadeThrough)),
+      GoRoute(path: '/settings', pageBuilder: (_, st) => motionPage(st, const SettingsScreen(), Motion.fadeThrough)),
+      GoRoute(path: '/verification', pageBuilder: (_, st) => motionPage(st, const VerificationScreen(), Motion.sheet)),
+      GoRoute(path: '/premium', pageBuilder: (_, st) => motionPage(st, const PremiumScreen(), Motion.zoom)),
+      GoRoute(path: '/pro-dashboard', pageBuilder: (_, st) => motionPage(st, const ProDashboard(), Motion.zoom)),
+      GoRoute(path: '/pro-edit', pageBuilder: (_, st) => motionPage(st, const EditProProfileScreen(), Motion.sheet)),
+      GoRoute(path: '/my-services', pageBuilder: (_, st) => motionPage(st, const MyServicesScreen(), Motion.fadeThrough)),
+      GoRoute(path: '/my-services/edit', pageBuilder: (_, s) => motionPage(s, ServiceFormScreen(service: s.extra as ProService?), Motion.sheet)),
+      GoRoute(path: '/about', pageBuilder: (_, st) => motionPage(st, const AboutScreen(), Motion.fadeThrough)),
     ],
   );
 }

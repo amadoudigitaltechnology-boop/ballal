@@ -23,8 +23,7 @@ class MyServicesScreen extends StatefulWidget {
 class _MyServicesScreenState extends State<MyServicesScreen> {
   late Future<List<ProService>> _future = _load();
 
-  Future<List<ProService>> _load() async =>
-      (await ProRepo.instance.services(currentUserId!, onlyPublished: false)).where((s) => s.status != 'archived').toList();
+  Future<List<ProService>> _load() => ProRepo.instance.services(currentUserId!, onlyPublished: false);
 
   Future<void> _reload() async {
     setState(() => _future = _load());
@@ -36,79 +35,110 @@ class _MyServicesScreenState extends State<MyServicesScreen> {
     _reload();
   }
 
-  Future<void> _archive(ProService s) async {
+  Future<void> _setArchived(ProService s, bool archived) async {
+    final l = context.l10n;
     try {
-      await ProRepo.instance.archiveService(s.id);
+      archived ? await ProRepo.instance.archiveService(s.id) : await ProRepo.instance.restoreService(s.id);
+      if (mounted) showInfo(context, archived ? l.movedToArchives : l.restored);
       _reload();
     } catch (e) {
       if (mounted) showError(context, e);
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
+  Widget _list(List<ProService> items, {required bool archives}) {
     final l = context.l10n;
-    return Scaffold(
-      appBar: AppBar(title: Text(l.myServices)),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _edit(),
-        icon: const Icon(Icons.add),
-        label: Text(l.addService),
-      ),
-      body: FutureBuilder<List<ProService>>(
-        future: _future,
-        builder: (context, snap) {
-          if (snap.hasError) return ErrorState(error: snap.error!, onRetry: _reload);
-          if (!snap.hasData) return const LoadingView();
-          final items = snap.data!;
-          if (items.isEmpty) {
-            return EmptyState(
+    if (items.isEmpty) {
+      return archives
+          ? EmptyState(icon: Icons.inventory_2_outlined, title: l.noArchives, message: l.noArchivesHint)
+          : EmptyState(
               icon: Icons.design_services_outlined,
               title: l.noServices,
               message: l.noServicesHint,
               action: l.addService,
               onAction: () => _edit(),
             );
-          }
-          return RefreshIndicator(
-            onRefresh: _reload,
-            child: ListView.builder(
-              padding: const EdgeInsets.fromLTRB(0, 8, 0, 96),
-              itemCount: items.length,
-              itemBuilder: (_, i) {
-                final s = items[i];
-                final price = formatPriceRange(s.priceMin, s.priceMax, s.priceUnit);
-                return BallalCard(
-                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
-                  onTap: () => _edit(s),
-                  child: Row(children: [
-                    ProPhoto(path: s.photos.firstOrNull, name: s.title, width: 64, height: 64, radius: 12),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Text(s.title, style: const TextStyle(fontWeight: FontWeight.w700)),
-                        if (price.isNotEmpty) Text(price, style: const TextStyle(color: BallalColors.primary, fontSize: 13)),
-                        const SizedBox(height: 4),
-                        Text(s.status == 'published' ? l.published : l.draft,
-                            style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: s.status == 'published' ? BallalColors.success : BallalColors.muted)),
-                      ]),
-                    ),
+    }
+    return RefreshIndicator(
+      onRefresh: _reload,
+      child: ListView.builder(
+        padding: const EdgeInsets.fromLTRB(0, 8, 0, 96),
+        itemCount: items.length,
+        itemBuilder: (_, i) {
+          final s = items[i];
+          final price = formatPriceRange(s.priceMin, s.priceMax, s.priceUnit);
+          return FadeSlideIn(
+            index: i,
+            child: Opacity(
+              opacity: archives ? 0.75 : 1,
+              child: BallalCard(
+                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
+                onTap: archives ? null : () => _edit(s),
+                child: Row(children: [
+                  ProPhoto(path: s.photos.firstOrNull, name: s.title, width: 64, height: 64, radius: 12),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text(s.title, style: const TextStyle(fontWeight: FontWeight.w700)),
+                      if (price.isNotEmpty) Text(price, style: const TextStyle(color: BallalColors.primary, fontSize: 13)),
+                      const SizedBox(height: 4),
+                      Text(archives ? l.archived : (s.status == 'published' ? l.published : l.draft),
+                          style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: !archives && s.status == 'published' ? BallalColors.success : BallalColors.muted)),
+                    ]),
+                  ),
+                  if (archives)
+                    TextButton.icon(
+                      onPressed: () => _setArchived(s, false),
+                      icon: const Icon(Icons.unarchive_outlined, size: 18),
+                      label: Text(l.restore),
+                    )
+                  else
                     PopupMenuButton<String>(
-                      onSelected: (v) => v == 'edit' ? _edit(s) : _archive(s),
+                      onSelected: (v) => v == 'edit' ? _edit(s) : _setArchived(s, true),
                       itemBuilder: (_) => [
                         PopupMenuItem(value: 'edit', child: Text(l.edit)),
                         PopupMenuItem(value: 'archive', child: Text(l.archive)),
                       ],
                     ),
-                  ]),
-                );
-              },
+                ]),
+              ),
             ),
           );
         },
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = context.l10n;
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(l.myServices),
+          bottom: TabBar(tabs: [Tab(text: l.tabActive), Tab(text: l.tabArchives)]),
+        ),
+        floatingActionButton: FloatingActionButton.extended(
+          onPressed: () => _edit(),
+          icon: const Icon(Icons.add),
+          label: Text(l.addService),
+        ),
+        body: FutureBuilder<List<ProService>>(
+          future: _future,
+          builder: (context, snap) {
+            if (snap.hasError) return ErrorState(error: snap.error!, onRetry: _reload);
+            if (!snap.hasData) return const LoadingView();
+            final all = snap.data!;
+            return TabBarView(children: [
+              _list(all.where((s) => s.status != 'archived').toList(), archives: false),
+              _list(all.where((s) => s.status == 'archived').toList(), archives: true),
+            ]);
+          },
+        ),
       ),
     );
   }

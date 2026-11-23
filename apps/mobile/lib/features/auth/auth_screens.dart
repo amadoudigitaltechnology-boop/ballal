@@ -3,12 +3,14 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show OAuthProvider, LaunchMode;
 
 import '../../core/formatters.dart';
 import '../../core/session.dart';
 import '../../core/supa.dart';
 import '../../core/theme.dart';
 import '../../data/repositories.dart';
+import '../../widgets/celebration.dart';
 import '../../widgets/common.dart';
 import '../onboarding/onboarding_screen.dart';
 
@@ -30,6 +32,27 @@ class _LoginScreenState extends State<LoginScreen> {
   void dispose() {
     _email.dispose();
     super.dispose();
+  }
+
+  bool _google = false;
+
+  /// « Continuer avec Google » : connexion en un clic avec le compte Gmail.
+  Future<void> _signInWithGoogle() async {
+    final l = context.l10n;
+    setState(() => _google = true);
+    try {
+      await supa.auth.signInWithOAuth(
+        OAuthProvider.google,
+        redirectTo: 'com.amadoutechnology.ballal://login-callback',
+        authScreenLaunchMode: LaunchMode.externalApplication,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      final msg = e.toString().toLowerCase();
+      showInfo(context, msg.contains('provider') || msg.contains('not enabled') ? l.googleNotReady : l.genericError);
+    } finally {
+      if (mounted) setState(() => _google = false);
+    }
   }
 
   Future<void> _submit() async {
@@ -107,7 +130,7 @@ class _LoginScreenState extends State<LoginScreen> {
           child: Padding(
             padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
             child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-              Text(l.welcomeTitle, style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w800, color: BallalColors.primaryDark)),
+              Text(l.welcomeTitle, style: displayStyle(30, color: BallalColors.primaryDark)),
               const SizedBox(height: 4),
               Text(l.loginSubtitle, style: const TextStyle(color: BallalColors.muted, fontSize: 15)),
               const SizedBox(height: 24),
@@ -143,6 +166,24 @@ class _LoginScreenState extends State<LoginScreen> {
                           const Icon(Icons.arrow_forward_rounded, size: 20),
                         ]),
                 ),
+              ),
+              const SizedBox(height: 16),
+              Row(children: [
+                const Expanded(child: Divider()),
+                Padding(padding: const EdgeInsets.symmetric(horizontal: 12), child: Text(l.or, style: const TextStyle(color: BallalColors.muted))),
+                const Expanded(child: Divider()),
+              ]),
+              const SizedBox(height: 16),
+              OutlinedButton(
+                onPressed: _google ? null : _signInWithGoogle,
+                style: OutlinedButton.styleFrom(minimumSize: const Size(64, 54), backgroundColor: Colors.white),
+                child: _google
+                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2.4))
+                    : Row(mainAxisSize: MainAxisSize.min, children: [
+                        const _GoogleG(),
+                        const SizedBox(width: 10),
+                        Text(l.continueWithGoogle, style: const TextStyle(color: BallalColors.text, fontWeight: FontWeight.w700)),
+                      ]),
               ),
               const SizedBox(height: 18),
               Text(l.termsNotice, textAlign: TextAlign.center, style: const TextStyle(color: BallalColors.muted, fontSize: 12)),
@@ -239,7 +280,7 @@ class _OtpScreenState extends State<OtpScreen> {
             child: const Icon(Icons.mark_email_read_outlined, color: BallalColors.primary, size: 36),
           ),
           const SizedBox(height: 18),
-          Text(l.otpTitle, style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w800)),
+          Text(l.otpTitle, style: displayStyle(26, color: BallalColors.primaryDark)),
           const SizedBox(height: 8),
           Text(l.otpSubtitle6(widget.email), style: const TextStyle(color: BallalColors.muted, fontSize: 15)),
           const SizedBox(height: 28),
@@ -374,6 +415,7 @@ class _SetupScreenState extends State<SetupScreen> {
     setState(() => _loading = true);
     try {
       await AccountRepo.instance.completeSetup(fullName: _name.text, role: _role!);
+      if (mounted) await showAccountCreated(context, _name.text.trim().split(' ').first);
       await Session.instance.refresh();
       if (mounted && _role == 'professional') context.go('/pro-edit');
     } catch (e) {
@@ -391,9 +433,13 @@ class _SetupScreenState extends State<SetupScreen> {
         borderRadius: BorderRadius.circular(kRadius),
         onTap: () => setState(() => _role = role),
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 150),
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeOutCubic,
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
+            boxShadow: selected
+                ? [BoxShadow(color: BallalColors.primary.withValues(alpha: 0.18), blurRadius: 18, offset: const Offset(0, 8))]
+                : null,
             color: selected ? BallalColors.primarySoft : Colors.white,
             borderRadius: BorderRadius.circular(kRadius),
             border: Border.all(color: selected ? BallalColors.primary : BallalColors.border, width: selected ? 2 : 1),
@@ -422,15 +468,16 @@ class _SetupScreenState extends State<SetupScreen> {
       backgroundColor: Colors.white,
       body: SafeArea(
         child: ListView(padding: const EdgeInsets.all(24), children: [
-          Text(l.setupTitle, style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w800)),
+          Text(l.setupTitle, style: displayStyle(28, color: BallalColors.primaryDark)),
           const SizedBox(height: 6),
           Text(l.setupSubtitle, style: const TextStyle(color: BallalColors.muted)),
           const SizedBox(height: 24),
+          FieldLabel(l.fullName),
           TextField(
             controller: _name,
             textCapitalization: TextCapitalization.words,
             onChanged: (_) => setState(() {}),
-            decoration: InputDecoration(labelText: l.fullName, prefixIcon: const Icon(Icons.person_outline)),
+            decoration: const InputDecoration(hintText: 'Ex. : Mamadou Diallo', prefixIcon: Icon(Icons.person_outline)),
           ),
           const SizedBox(height: 24),
           Text(l.chooseProfile, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
@@ -481,4 +528,37 @@ class SuspendedScreen extends StatelessWidget {
       ),
     );
   }
+}
+
+
+/// « G » multicolore dessiné (pas d'image de marque embarquée).
+class _GoogleG extends StatelessWidget {
+  const _GoogleG();
+
+  @override
+  Widget build(BuildContext context) => SizedBox(width: 20, height: 20, child: CustomPaint(painter: _GPainter()));
+}
+
+class _GPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = Offset.zero & size;
+    final stroke = size.width * 0.2;
+    final r = rect.deflate(stroke / 2);
+    Paint p(Color c) => Paint()
+      ..color = c
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = stroke;
+    canvas.drawArc(r, -0.75, -1.6, false, p(const Color(0xFFEA4335)));
+    canvas.drawArc(r, -2.35, -1.55, false, p(const Color(0xFFFBBC05)));
+    canvas.drawArc(r, 2.38, -1.6, false, p(const Color(0xFF34A853)));
+    canvas.drawArc(r, 0.78, -0.78, false, p(const Color(0xFF4285F4)));
+    canvas.drawLine(Offset(size.width / 2, size.height / 2), Offset(size.width - stroke / 2, size.height / 2),
+        Paint()
+          ..color = const Color(0xFF4285F4)
+          ..strokeWidth = stroke);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

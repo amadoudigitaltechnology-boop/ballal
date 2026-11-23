@@ -131,3 +131,16 @@ if gs.exists() and app_dir.exists():
     </application>''', 1)
     manifest.write_text(m, encoding="utf-8")
     print("Android : Firebase configuré")
+
+# ─── Retour de la connexion Google (lien profond) ───
+m = manifest.read_text(encoding="utf-8")
+if "login-callback" not in m:
+    m = m.replace("</activity>", '''    <intent-filter>
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="com.amadoutechnology.ballal" android:host="login-callback"/>
+            </intent-filter>
+        </activity>''', 1)
+    manifest.write_text(m, encoding="utf-8")
+    print("Android : lien de retour Google configuré")

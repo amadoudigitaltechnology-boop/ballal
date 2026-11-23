@@ -240,7 +240,7 @@
   "addressHint": "Repère (ex. : près de la mosquée)",
   "addressHintPrivate": "Visible uniquement par le professionnel.",
   "desiredDate": "Date souhaitée",
-  "optional": "Facultatif",
+  "optional": "(facultatif)",
   "budgetOptional": "Budget indicatif (facultatif)",
   "photosOptional": "Photos (facultatif, 3 max)",
   "remove": "Retirer",
@@ -256,7 +256,7 @@
   "backHome": "Retour à l'accueil",
   "myRequests": "Mes demandes",
   "tabOngoing": "En cours",
-  "tabClosed": "Terminées",
+  "tabClosed": "Archives",
   "noRequestsYet": "Vous n'avez pas encore envoyé de demande.",
   "findPro": "Trouver un professionnel",
   "statusPending": "En attente",
@@ -409,7 +409,7 @@
   "mainTradeHint": "Ex. : Plombier sanitaire",
   "proDescriptionHint": "Votre expérience, ce que vous faites, votre façon de travailler…",
   "experienceYears": "Années d'expérience",
-  "skillsHint": "Séparées par des virgules : fuite, chauffe-eau…",
+  "skillsHint": "Ex. : tableaux électriques, climatisation, dépannage 24 h/24",
   "tradesAndCategories": "Métiers",
   "tradesSelected": "{count} métier(s) choisi(s)",
   "@tradesSelected": {
@@ -624,5 +624,27 @@
         "type": "String"
       }
     }
-  }
+  },
+  "tabActive": "Actifs",
+  "tabArchives": "Archives",
+  "archived": "Archivé",
+  "restore": "Restaurer",
+  "restored": "Service restauré et republié ✅",
+  "movedToArchives": "Déplacé dans les archives",
+  "noArchives": "Aucune archive",
+  "noArchivesHint": "Les éléments que vous archivez apparaîtront ici.",
+  "specialties": "Spécialités",
+  "accountCreatedTitle": "Votre compte a été créé avec succès 🎉",
+  "accountCreatedText": "Bienvenue sur BALLAL, {name} ! Tout est prêt.",
+  "@accountCreatedText": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "or": "ou",
+  "continueWithGoogle": "Continuer avec Google",
+  "googleNotReady": "La connexion Google sera disponible très bientôt. Utilisez votre e-mail en attendant.",
+  "genericError": "Une erreur s'est produite. Réessayez."
 }

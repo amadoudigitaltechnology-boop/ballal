@@ -374,8 +374,8 @@ class _Banner extends StatelessWidget {
         margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(22),
-          gradient: const LinearGradient(colors: [BallalColors.primary, BallalColors.primaryDark]),
-          boxShadow: [BoxShadow(color: BallalColors.primary.withValues(alpha: 0.25), blurRadius: 18, offset: const Offset(0, 8))],
+          gradient: kBrandGradient,
+          boxShadow: [BoxShadow(color: BallalColors.primary.withValues(alpha: 0.35), blurRadius: 24, offset: const Offset(0, 10))],
         ),
         clipBehavior: Clip.antiAlias,
         child: Stack(children: [
@@ -414,8 +414,7 @@ class _Banner extends StatelessWidget {
             child: SizedBox(
               width: MediaQuery.of(context).size.width * 0.5,
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(l.bannerTitle,
-                    style: const TextStyle(color: Colors.white, fontSize: 19, fontWeight: FontWeight.w800, height: 1.25)),
+                Text(l.bannerTitle, style: displayStyle(19, color: Colors.white)),
                 const Spacer(),
                 FilledButton(
                   style: FilledButton.styleFrom(

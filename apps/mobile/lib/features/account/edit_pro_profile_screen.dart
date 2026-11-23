@@ -251,7 +251,8 @@ class _EditProProfileScreenState extends State<EditProProfileScreen> {
       await ProRepo.instance.saveMyProfile(
         profile: {
           'display_name': _name.text.trim(),
-          'headline': _headline.text.trim(),
+          // Le métier affiché = le métier principal choisi dans la liste (plus de saisie en double).
+          'headline': _allCategories.where((c) => c.id == _primaryCategory).firstOrNull?.name ?? _headline.text.trim(),
           'description': _description.text.trim(),
           'pro_type': _proType,
           'experience_years': int.tryParse(_experience.text),
@@ -423,15 +424,6 @@ class _EditProProfileScreenState extends State<EditProProfileScreen> {
             decoration: InputDecoration(hintText: l.proDisplayNameHint, prefixIcon: const Icon(Icons.storefront_outlined)),
           ),
           const SizedBox(height: 12),
-          FieldLabel(l.mainTrade),
-          TextField(
-            controller: _headline,
-            maxLength: 200,
-            buildCounter: noCounter,
-            textCapitalization: TextCapitalization.sentences,
-            decoration: InputDecoration(hintText: l.mainTradeHint, prefixIcon: const Icon(Icons.work_outline)),
-          ),
-          const SizedBox(height: 12),
           FieldLabel(l.description),
           TextField(
             controller: _description,
@@ -456,12 +448,6 @@ class _EditProProfileScreenState extends State<EditProProfileScreen> {
               ]),
             ),
           ]),
-          const SizedBox(height: 12),
-          FieldLabel(l.skills),
-          TextField(
-            controller: _skills,
-            decoration: InputDecoration(hintText: l.skillsHint, prefixIcon: const Icon(Icons.bolt_outlined)),
-          ),
         ]),
 
         _section(l.tradesAndCategories, icon: Icons.category_outlined, [
@@ -487,6 +473,12 @@ class _EditProProfileScreenState extends State<EditProProfileScreen> {
             onPressed: _chooseCategories,
             icon: const Icon(Icons.add),
             label: Text(catNames.isEmpty ? l.chooseTrades : l.editTrades),
+          ),
+          const SizedBox(height: 14),
+          FieldLabel(l.specialties, note: l.optional),
+          TextField(
+            controller: _skills,
+            decoration: InputDecoration(hintText: l.skillsHint, prefixIcon: const Icon(Icons.bolt_outlined)),
           ),
         ]),
 

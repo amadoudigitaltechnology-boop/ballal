@@ -395,6 +395,11 @@ class ProRepo {
     await supa.from('services').update({'status': 'archived'}).eq('id', id);
   }
 
+  /// Sort un service des archives et le republie.
+  Future<void> restoreService(String id) async {
+    await supa.from('services').update({'status': 'published'}).eq('id', id);
+  }
+
   Future<Map<String, int>> dashboardStats() async {
     final uid = currentUserId!;
     final reqs = _rows(await supa.from('service_requests').select('status').eq('professional_id', uid));

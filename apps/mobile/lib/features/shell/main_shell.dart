@@ -1,3 +1,5 @@
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -65,15 +67,34 @@ class _MainShellState extends State<MainShell> with SingleTickerProviderStateMix
       ),
       bottomNavigationBar: ListenableBuilder(
         listenable: Listenable.merge([Unread.instance, Session.instance]),
-        builder: (context, _) => Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 16, offset: const Offset(0, -4))],
-          ),
-          child: SafeArea(
-            top: false,
+        builder: (context, _) => SafeArea(
+          top: false,
+          // Barre flottante façon verre : arrondie, légèrement translucide, halo bleu.
+          child: Container(
+            margin: const EdgeInsets.fromLTRB(14, 0, 14, 10),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(30),
+              boxShadow: [
+                BoxShadow(color: BallalColors.primary.withValues(alpha: 0.16), blurRadius: 28, offset: const Offset(0, 10)),
+                BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 6, offset: const Offset(0, 2)),
+              ],
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(30),
+              child: BackdropFilter(
+                filter: ui.ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [Colors.white.withValues(alpha: 0.92), const Color(0xFFF1F5FF).withValues(alpha: 0.88)],
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                    ),
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.9)),
+                    borderRadius: BorderRadius.circular(30),
+                  ),
             child: SizedBox(
-              height: 64,
+              height: 66,
               child: Row(children: [
                 _NavItem(icon: Icons.home_rounded, label: l.navHome, selected: shell.currentIndex == 0, onTap: () => _go(0)),
                 _NavItem(icon: Icons.search_rounded, label: l.navSearch, selected: shell.currentIndex == 1, onTap: () => _go(1)),
@@ -89,7 +110,7 @@ class _MainShellState extends State<MainShell> with SingleTickerProviderStateMix
                           height: 48,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            gradient: const LinearGradient(colors: [BallalColors.accent, Color(0xFFFF5A00)]),
+                            gradient: const LinearGradient(colors: [Color(0xFFFF9A3D), BallalColors.accent, Color(0xFFFF5A00)], begin: Alignment.topLeft, end: Alignment.bottomRight),
                             boxShadow: [BoxShadow(color: BallalColors.accent.withValues(alpha: 0.35), blurRadius: 12, offset: const Offset(0, 4))],
                           ),
                           child: const Icon(Icons.add_rounded, color: Colors.white, size: 28),
@@ -107,6 +128,9 @@ class _MainShellState extends State<MainShell> with SingleTickerProviderStateMix
                 ),
                 _NavItem(icon: Icons.person_outline_rounded, label: l.navProfile, selected: shell.currentIndex == 3, onTap: () => _go(3)),
               ]),
+            ),
+                ),
+              ),
             ),
           ),
         ),

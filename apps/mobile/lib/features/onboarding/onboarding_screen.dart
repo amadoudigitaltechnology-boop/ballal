@@ -157,7 +157,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 28),
                       child: Text(title,
-                          style: const TextStyle(fontSize: 27, fontWeight: FontWeight.w800, color: BallalColors.primaryDark, height: 1.2)),
+                          style: displayStyle(28, color: BallalColors.primaryDark)),
                     ),
                     const SizedBox(height: 10),
                     Padding(
