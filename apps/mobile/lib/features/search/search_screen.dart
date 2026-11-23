@@ -8,6 +8,7 @@ import '../../core/theme.dart';
 import '../../data/models.dart';
 import '../../data/repositories.dart';
 import '../../widgets/common.dart';
+import 'pro_map.dart';
 
 class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key, this.initialCategoryId, this.initialQuery, this.nearMe = false});
@@ -29,6 +30,7 @@ class _SearchScreenState extends State<SearchScreen> {
   bool _loading = false;
   bool _hasMore = true;
   int _requestSeq = 0;
+  bool _showMap = false;
 
   @override
   void initState() {
@@ -141,6 +143,7 @@ class _SearchScreenState extends State<SearchScreen> {
           ..lng = lng
           ..radiusKm ??= 10
           ..sort = 'distance';
+        _showMap = true;
       });
       _search();
     } catch (e) {
@@ -174,7 +177,20 @@ class _SearchScreenState extends State<SearchScreen> {
   Widget build(BuildContext context) {
     final l = context.l10n;
     return Scaffold(
-      appBar: AppBar(title: Text(_filters.usesGps ? l.nearYou : l.navSearch)),
+      appBar: AppBar(
+        title: Text(_filters.usesGps ? l.nearYou : l.navSearch),
+        actions: [
+          IconButton(
+            tooltip: _showMap ? l.listView : l.mapView,
+            onPressed: () => setState(() => _showMap = !_showMap),
+            icon: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 220),
+              transitionBuilder: (c, a) => ScaleTransition(scale: a, child: c),
+              child: Icon(_showMap ? Icons.view_list_rounded : Icons.map_outlined, key: ValueKey(_showMap)),
+            ),
+          ),
+        ],
+      ),
       body: Column(children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
@@ -293,13 +309,20 @@ class _SearchScreenState extends State<SearchScreen> {
       child: ListView.builder(
         controller: _scroll,
         padding: const EdgeInsets.only(top: 4, bottom: 24),
-        itemCount: _results.length + (_hasMore ? 1 : 0),
-        itemBuilder: (_, i) {
+        itemCount: _results.length + (_hasMore ? 1 : 0) + (_showMap ? 1 : 0),
+        itemBuilder: (_, index) {
+          if (_showMap && index == 0) {
+            return Padding(
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+              child: FadeSlideIn(child: ProMap(pros: _results, userLat: _filters.lat, userLng: _filters.lng)),
+            );
+          }
+          final i = _showMap ? index - 1 : index;
           if (i >= _results.length) {
             return const Padding(padding: EdgeInsets.all(16), child: Center(child: CircularProgressIndicator()));
           }
           final pro = _results[i];
-          return ProListTile(pro: pro, trailing: FavoriteButton(proId: pro.id));
+          return FadeSlideIn(index: i % 10, child: ProListTile(pro: pro, trailing: FavoriteButton(proId: pro.id)));
         },
       ),
     );

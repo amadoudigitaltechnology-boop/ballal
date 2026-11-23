@@ -290,6 +290,31 @@ class ProRepo {
     }
   }
 
+  /// Mes dossiers de vérification (identité / entreprise), du plus récent au plus ancien.
+  Future<List<Map<String, dynamic>>> myVerifications() async {
+    final rows = await supa
+        .from('verification_documents')
+        .select('id, doc_type, status, rejection_reason, created_at')
+        .eq('user_id', currentUserId!)
+        .order('created_at', ascending: false);
+    return (rows as List).map((e) => Map<String, dynamic>.from(e as Map)).toList();
+  }
+
+  /// Envoie une pièce (photo) dans l'espace privé, puis crée le dossier « en attente ».
+  Future<void> submitVerification(String docType, Uint8List bytes) async {
+    final uid = currentUserId!;
+    final path = '$uid/${_uuid.v4()}.jpg';
+    await supa.storage.from('verification-docs').uploadBinary(path, bytes, fileOptions: const FileOptions(contentType: 'image/jpeg'));
+    try {
+      await supa.from('verification_documents').insert({'user_id': uid, 'doc_type': docType, 'storage_path': path});
+    } catch (e) {
+      try {
+        await supa.storage.from('verification-docs').remove([path]);
+      } catch (_) {}
+      rethrow;
+    }
+  }
+
   Future<void> archiveService(String id) async {
     await supa.from('services').update({'status': 'archived'}).eq('id', id);
   }

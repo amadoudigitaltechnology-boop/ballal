@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/session.dart';
 import '../../core/supa.dart';
 import '../../core/theme.dart';
 import '../../data/repositories.dart';
 import '../../widgets/common.dart';
+
+/// Pages légales publiques (GitHub Pages du dépôt).
+const kLegalBaseUrl = 'https://amadoudigitaltechnology-boop.github.io/ballal';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -145,6 +149,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       onTap: () => context.push('/my-services'),
                     ),
                     ListTile(
+                      leading: const Icon(Icons.verified_outlined),
+                      title: Text(l.verifyMyProfile),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () => context.push('/verification'),
+                    ),
+                    ListTile(
+                      leading: const Icon(Icons.workspace_premium_outlined),
+                      title: Text(l.boostMyProfile),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () => context.push('/premium'),
+                    ),
+                    ListTile(
                       leading: const Icon(Icons.dashboard_customize_outlined),
                       title: Text(l.proSpace),
                       trailing: const Icon(Icons.chevron_right),
@@ -184,7 +200,31 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     subtitle: Text(l.languageFrOnly),
                     leading: const Icon(Icons.translate_rounded),
                   ),
+                  _header(l.legal),
+                  ListTile(
+                    leading: const Icon(Icons.privacy_tip_outlined),
+                    title: Text(l.privacyPolicy),
+                    trailing: const Icon(Icons.open_in_new_rounded, size: 18),
+                    onTap: () => launchUrl(Uri.parse('$kLegalBaseUrl/confidentialite.html'), mode: LaunchMode.externalApplication),
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.gavel_outlined),
+                    title: Text(l.termsOfUse),
+                    trailing: const Icon(Icons.open_in_new_rounded, size: 18),
+                    onTap: () => launchUrl(Uri.parse('$kLegalBaseUrl/conditions.html'), mode: LaunchMode.externalApplication),
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.info_outline),
+                    title: Text(l.about),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => context.push('/about'),
+                  ),
                   _header(l.account),
+                  ListTile(
+                    leading: const Icon(Icons.logout_rounded),
+                    title: Text(l.logout),
+                    onTap: () => Session.instance.signOut(),
+                  ),
                   ListTile(
                     leading: const Icon(Icons.delete_forever_outlined, color: BallalColors.danger),
                     title: Text(l.deleteAccount, style: const TextStyle(color: BallalColors.danger)),

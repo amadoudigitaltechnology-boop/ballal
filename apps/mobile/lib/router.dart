@@ -7,6 +7,7 @@ import 'features/account/account_screen.dart';
 import 'features/account/edit_pro_profile_screen.dart';
 import 'features/account/my_services_screen.dart';
 import 'features/account/settings_screen.dart';
+import 'features/account/verification_screen.dart';
 import 'features/auth/auth_screens.dart';
 import 'features/chat/chat_screen.dart';
 import 'features/chat/conversations_screen.dart';
@@ -90,6 +91,8 @@ GoRouter buildRouter() {
       GoRoute(path: '/favorites', builder: (_, __) => const FavoritesScreen()),
       GoRoute(path: '/notifications', builder: (_, __) => const NotificationsScreen()),
       GoRoute(path: '/settings', builder: (_, __) => const SettingsScreen()),
+      GoRoute(path: '/verification', builder: (_, __) => const VerificationScreen()),
+      GoRoute(path: '/premium', builder: (_, __) => const PremiumScreen()),
       GoRoute(path: '/pro-dashboard', builder: (_, __) => const ProDashboard()),
       GoRoute(path: '/pro-edit', builder: (_, __) => const EditProProfileScreen()),
       GoRoute(path: '/my-services', builder: (_, __) => const MyServicesScreen()),

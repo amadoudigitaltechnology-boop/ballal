@@ -560,5 +560,46 @@
       }
     }
   },
-  "bannerCta": "Découvrir"
+  "bannerCta": "Découvrir",
+  "listView": "Voir en liste",
+  "mapView": "Voir sur la carte",
+  "sponsored": "Mis en avant",
+  "premium": "Premium",
+  "takePhoto": "Prendre une photo",
+  "chooseFromGallery": "Choisir dans la galerie",
+  "verificationSent": "Document envoyé. Notre équipe le vérifie sous 48 h.",
+  "verifyMyProfile": "Faire vérifier mon profil",
+  "verificationIntro": "Obtenez le badge bleu « Vérifié » : les clients font davantage confiance aux profils vérifiés.",
+  "docIdentity": "Pièce d'identité",
+  "docIdentityHint": "Carte d'identité, passeport ou permis — photo nette, en entier",
+  "docCompany": "Document d'entreprise",
+  "docCompanyHint": "RCCM, NIF ou agrément (pour les entreprises)",
+  "verificationPrivacy": "Vos documents restent privés : seule l'équipe de modération BALLAL peut les voir.",
+  "verifApproved": "Vérifié ✓",
+  "verifPending": "En cours de vérification",
+  "verifRejected": "Refusé",
+  "verifNone": "Non envoyé",
+  "sendAgain": "Renvoyer",
+  "rejectionReason": "Motif : {reason}",
+  "boostMyProfile": "Booster mon profil",
+  "featuredText": "Votre profil apparaît en tête des recherches et des recommandations, avec la mention « Mis en avant ».",
+  "featuredPerk1": "Premières places dans les résultats",
+  "featuredPerk2": "Épingle orange sur la carte",
+  "featuredPerk3": "Plus de demandes de clients",
+  "premiumText": "Le badge Premium distingue les professionnels sérieux et améliore votre classement.",
+  "premiumPerk1": "Badge Premium sur votre profil",
+  "premiumPerk2": "Meilleur classement dans les recherches",
+  "premiumPerk3": "Assistance prioritaire",
+  "activateViaWhatsapp": "Activer via WhatsApp",
+  "paymentNote": "Le paiement se fait par Orange Money ou MTN Mobile Money auprès de l'équipe BALLAL. L'option est activée dès réception et vous recevez une notification.",
+  "legal": "Informations légales",
+  "privacyPolicy": "Politique de confidentialité",
+  "termsOfUse": "Conditions d'utilisation",
+  "@rejectionReason": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  }
 }

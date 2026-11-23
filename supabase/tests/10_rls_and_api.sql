@@ -68,9 +68,16 @@ select pg_temp.check((select rating_count = 0 and not identity_verified and lat 
 select pg_temp.check((select phone from public.professional_contacts where user_id = '00000000-0000-0000-0000-00000000000c') = '+224620000003',
                      'téléphone pro normalisé +224');
 
--- ═══ Visiteur anonyme ═══
+-- ═══ Visiteur anonyme : compte obligatoire pour chercher ═══
 select set_config('request.jwt.claim.sub', '', false);
 set role anon;
+select pg_temp.expect_error($q$select * from public.search_professionals('plombie')$q$, 'recherche sans compte');
+select pg_temp.expect_error($q$select * from public.recommend_professionals()$q$, 'recommandations sans compte');
+reset role;
+
+-- ═══ Recherche (client connecté) ═══
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000000000a', false);
+set role authenticated;
 select pg_temp.check((select count(*) from public.search_professionals('plombie')) = 1, 'recherche avec faute de frappe');
 select pg_temp.check((select count(*) from public.search_professionals('Plombier Kipé')) = 1, 'recherche multi-mots avec accent');
 select pg_temp.check((select count(*) from public.search_professionals('chauffe eau')) = 1, 'recherche par compétence');
@@ -85,6 +92,10 @@ select pg_temp.check((select count(*) from public.search_professionals(p_lat := 
 select pg_temp.check((select count(*) from public.search_professionals(p_lat := 10.38, p_lng := -9.30, p_radius_km := 5)) = 0, 'hors rayon (Kankan)');
 select pg_temp.check((select count(*) from public.search_professionals(p_category := (select id from public.categories where slug = 'batiment'))) = 1,
                      'filtre famille de catégorie');
+select pg_temp.check((select lat is not null and not is_featured from public.search_professionals('plombie')), 'carte : coordonnées renvoyées');
+reset role;
+select set_config('request.jwt.claim.sub', '', false);
+set role anon;
 select pg_temp.check((select count(*) from public.professional_contacts) = 0, 'anonyme ne lit pas les contacts');
 select pg_temp.check((select count(*) from public.profiles where id = '00000000-0000-0000-0000-00000000000a') = 0, 'anonyme ne voit pas les clients');
 select pg_temp.expect_error($q$select * from public.get_professional_contact('00000000-0000-0000-0000-00000000000c')$q$, 'contact sans connexion');
@@ -196,8 +207,8 @@ select public.admin_set_user_status('00000000-0000-0000-0000-00000000000c', 'sus
 select pg_temp.check((select count(*) from public.audit_logs where action = 'user.set_status') = 1, 'action admin journalisée');
 reset role;
 
-select set_config('request.jwt.claim.sub', '', false);
-set role anon;
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000000000a', false);
+set role authenticated;
 select pg_temp.check((select count(*) from public.search_professionals('plombier')) = 0, 'pro suspendu retiré de la recherche');
 reset role;
 
@@ -246,5 +257,30 @@ set role authenticated;
 select pg_temp.check(public.count_my_followers() = 1, 'compteur de favoris du pro');
 select pg_temp.check((select count(*) from public.favorites) = 0, 'le pro ne voit pas qui l''a mis en favori');
 reset role;
+
+-- ═══ Mise en avant / Premium / administration ═══
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000000000c', false);
+set role authenticated;
+update public.professional_profiles set featured_until = now() + interval '1 year', premium_until = now() + interval '1 year'
+ where user_id = auth.uid();
+reset role;
+select pg_temp.check((select featured_until is null and premium_until is null from public.professional_profiles
+                       where user_id = '00000000-0000-0000-0000-00000000000c'), 'le pro ne peut pas s''auto-mettre en avant');
+set role authenticated;
+select pg_temp.expect_error($q$select public.admin_set_pro_boost('00000000-0000-0000-0000-00000000000c', 30, 30)$q$, 'boost par un non-admin');
+select pg_temp.expect_error($q$select public.admin_stats()$q$, 'statistiques par un non-admin');
+select pg_temp.expect_error($q$select * from public.admin_list_users()$q$, 'liste des utilisateurs par un non-admin');
+reset role;
+insert into public.user_roles (user_id, role) values ('00000000-0000-0000-0000-00000000000b', 'admin') on conflict do nothing;
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000000000b', false);
+set role authenticated;
+select public.admin_set_pro_boost('00000000-0000-0000-0000-00000000000c', 30, null);
+select pg_temp.check((select is_featured from public.search_professionals('plombie')), 'pro mis en avant par l''admin');
+select pg_temp.check((public.admin_stats() ->> 'featured')::int = 1, 'statistiques admin');
+select pg_temp.check((select count(*) from public.admin_list_users()) >= 4, 'liste des utilisateurs (admin)');
+select public.admin_set_pro_boost('00000000-0000-0000-0000-00000000000c', 0, null);
+select pg_temp.check((select not is_featured from public.search_professionals('plombie')), 'mise en avant retirée');
+reset role;
+delete from public.user_roles where user_id = '00000000-0000-0000-0000-00000000000b' and role = 'admin';
 
 \echo '══════ TOUS LES TESTS SONT PASSÉS ══════'

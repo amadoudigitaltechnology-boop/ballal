@@ -60,6 +60,10 @@ class ProCard {
     required this.phoneVerified,
     this.distanceKm,
     required this.reasons,
+    this.lat,
+    this.lng,
+    this.isFeatured = false,
+    this.isPremium = false,
   });
 
   final String id;
@@ -76,6 +80,10 @@ class ProCard {
   final bool phoneVerified;
   final double? distanceKm;
   final List<String> reasons;
+  final double? lat;
+  final double? lng;
+  final bool isFeatured;
+  final bool isPremium;
 
   factory ProCard.fromMap(Map<String, dynamic> m) => ProCard(
         id: m['professional_id'] as String,
@@ -90,6 +98,10 @@ class ProCard {
         identityVerified: (m['identity_verified'] as bool?) ?? false,
         companyVerified: (m['company_verified'] as bool?) ?? false,
         phoneVerified: (m['phone_verified'] as bool?) ?? false,
+        lat: _double(m['lat']),
+        lng: _double(m['lng']),
+        isFeatured: (m['is_featured'] as bool?) ?? false,
+        isPremium: (m['is_premium'] as bool?) ?? false,
         distanceKm: _double(m['distance_km']),
         reasons: _strings(m['reasons']),
       );

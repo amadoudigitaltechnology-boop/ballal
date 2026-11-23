@@ -29,10 +29,25 @@ jobs:
           channel: stable
           cache: true
 
+      - name: Clé de signature (si les secrets sont configurés)
+        env:
+          KS_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KS_PW: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KS_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          if [ -n "$KS_B64" ]; then
+            mkdir -p signing
+            echo "$KS_B64" | base64 -d > signing/upload.jks
+            printf "storePassword=%s\nkeyPassword=%s\nkeyAlias=%s\nstoreFile=%s\n" "$KS_PW" "$KS_PW" "${KS_ALIAS:-ballal}" "$PWD/signing/upload.jks" > signing/key.properties
+            echo "Signature officielle activée"
+          else
+            echo "Pas de clé configurée : signature de test"
+          fi
+
       - name: Générer les dossiers Android
         run: |
           flutter create --org com.amadoutechnology --project-name ballal --platforms android .
-          python3 tool/setup_platforms.py || true
+          python3 tool/setup_platforms.py
 
       - run: flutter pub get
       - run: flutter gen-l10n
@@ -42,8 +57,10 @@ jobs:
         run: flutter test
         continue-on-error: true
 
-      - name: Construire l'APK
-        run: flutter build apk --release --dart-define-from-file=env/dev.json
+      - name: Construire l'APK et le fichier Play Store (AAB)
+        run: |
+          flutter build apk --release --dart-define-from-file=env/dev.json --build-number=${{ github.run_number }}
+          flutter build appbundle --release --dart-define-from-file=env/dev.json --build-number=${{ github.run_number }}
 
       - uses: actions/upload-artifact@v4
         with:
@@ -55,6 +72,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           cp build/app/outputs/flutter-apk/app-release.apk BALLAL.apk
+          cp build/app/outputs/bundle/release/app-release.aab BALLAL-PlayStore.aab
           TAG="build-${{ github.run_number }}"
-          gh release create "$TAG" BALLAL.apk --title "BALLAL – version de test ${{ github.run_number }}" \
+          gh release create "$TAG" BALLAL.apk BALLAL-PlayStore.aab --title "BALLAL – version de test ${{ github.run_number }}" \
             --notes "APK de test généré automatiquement depuis le commit ${{ github.sha }}." --latest

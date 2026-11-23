@@ -358,6 +358,13 @@ class ProListTile extends StatelessWidget {
               const SizedBox(width: 4),
               VerifiedBadge(identity: pro.identityVerified, company: pro.companyVerified, size: 16),
             ]),
+            if (pro.isFeatured || pro.isPremium) ...[
+              const SizedBox(height: 3),
+              Wrap(spacing: 6, children: [
+                if (pro.isFeatured) _Tag(label: context.l10n.sponsored, color: BallalColors.accent, icon: Icons.trending_up_rounded),
+                if (pro.isPremium) _Tag(label: context.l10n.premium, color: const Color(0xFFB8860B), icon: Icons.workspace_premium_rounded),
+              ]),
+            ],
             const SizedBox(height: 2),
             Text(pro.headline, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: BallalColors.muted, fontSize: 13)),
             const SizedBox(height: 6),
@@ -380,6 +387,26 @@ class ProListTile extends StatelessWidget {
             Text(formatKm(pro.distanceKm!), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
           ],
         ]),
+      ]),
+    );
+  }
+}
+
+class _Tag extends StatelessWidget {
+  const _Tag({required this.label, required this.color, required this.icon});
+  final String label;
+  final Color color;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+      decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(20)),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        Icon(icon, size: 12, color: color),
+        const SizedBox(width: 3),
+        Text(label, style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w800, color: color)),
       ]),
     );
   }

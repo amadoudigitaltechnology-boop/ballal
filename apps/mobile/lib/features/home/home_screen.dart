@@ -572,6 +572,28 @@ class _ProDashboardState extends State<ProDashboard> {
                     ),
                   ]),
                 ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+                  child: Row(children: [
+                    Expanded(
+                      child: _QuickAction(
+                        icon: Icons.verified_outlined,
+                        label: (profile?['identity_verified'] as bool? ?? false) ? l.verifApproved : l.verifyMyProfile,
+                        color: BallalColors.primary,
+                        onTap: () => context.push('/verification'),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: _QuickAction(
+                        icon: Icons.workspace_premium_rounded,
+                        label: l.boostMyProfile,
+                        color: BallalColors.accent,
+                        onTap: () => context.push('/premium'),
+                      ),
+                    ),
+                  ]),
+                ),
                 SectionHeader(title: l.receivedRequests, action: l.seeAll, onAction: () => context.push('/requests')),
                 if (reqs.isEmpty)
                   Padding(
@@ -618,6 +640,31 @@ class _Stat extends StatelessWidget {
         Text(value, style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: color)),
         const SizedBox(height: 2),
         Text(label, textAlign: TextAlign.center, maxLines: 2, style: const TextStyle(fontSize: 11, color: BallalColors.muted)),
+      ]),
+    );
+  }
+}
+
+class _QuickAction extends StatelessWidget {
+  const _QuickAction({required this.icon, required this.label, required this.color, required this.onTap});
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return BallalCard(
+      padding: const EdgeInsets.all(12),
+      onTap: onTap,
+      child: Row(children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(10)),
+          child: Icon(icon, color: color, size: 20),
+        ),
+        const SizedBox(width: 10),
+        Expanded(child: Text(label, maxLines: 2, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13))),
       ]),
     );
   }

@@ -74,3 +74,33 @@ if appicon.exists():
         print("iOS : icône BALLAL installée")
     except Exception as e:  # noqa: BLE001
         print(f"iOS : icône non remplacée ({e})")
+
+# ─── Signature officielle (si signing/key.properties existe, créé par la CI depuis les secrets) ───
+props = ROOT / "signing/key.properties"
+gradle = ROOT / "android/app/build.gradle.kts"
+if props.exists() and gradle.exists():
+    g = gradle.read_text(encoding="utf-8")
+    if "ballalSigning" not in g:
+        header = """import java.util.Properties
+import java.io.FileInputStream
+
+val ballalSigning = Properties().apply {
+    val f = rootProject.file("../signing/key.properties")
+    if (f.exists()) load(FileInputStream(f))
+}
+
+"""
+        g = header + g
+        g = g.replace("    buildTypes {", """    signingConfigs {
+        create("release") {
+            keyAlias = ballalSigning.getProperty("keyAlias")
+            keyPassword = ballalSigning.getProperty("keyPassword")
+            storeFile = file(ballalSigning.getProperty("storeFile"))
+            storePassword = ballalSigning.getProperty("storePassword")
+        }
+    }
+
+    buildTypes {""", 1)
+        g = g.replace('signingConfig = signingConfigs.getByName("debug")', 'signingConfig = signingConfigs.getByName("release")')
+        gradle.write_text(g, encoding="utf-8")
+        print("Android : signature officielle configurée")
