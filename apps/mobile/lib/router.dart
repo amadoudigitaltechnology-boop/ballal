@@ -22,20 +22,17 @@ import 'features/search/search_screen.dart';
 import 'features/shell/main_shell.dart';
 
 const _authRoutes = {'/welcome', '/login', '/otp'};
-const _guestBlocked = [
-  '/requests', '/request/', '/chat', '/favorites', '/notifications', '/settings', '/pro-edit', '/pro-dashboard', '/my-services',
-];
 
 String? _redirect(BuildContext context, GoRouterState state) {
   final s = Session.instance;
   final loc = state.matchedLocation;
   if (!s.initialized) return loc == '/splash' ? null : '/splash';
 
+  // Compte obligatoire : sans connexion, seuls l'accueil de présentation, la connexion et « À propos » sont accessibles.
   if (!s.isSignedIn) {
-    if (!s.onboardingSeen && loc != '/welcome') return '/welcome';
-    if (loc == '/splash' || loc == '/setup' || loc == '/suspended') return '/home';
-    if (_guestBlocked.any(loc.startsWith)) return '/login';
-    return null;
+    if (!s.onboardingSeen) return loc == '/welcome' ? null : '/welcome';
+    if (_authRoutes.contains(loc) || loc == '/about') return null;
+    return '/login';
   }
   if (s.isSuspended) return loc == '/suspended' ? null : '/suspended';
   if (s.needsSetup) return (loc == '/setup' || loc == '/about') ? null : '/setup';

@@ -44,3 +44,10 @@ if ((Test-Path $test) -and ((Get-Content $test -Raw) -match "MyApp")) {
   Remove-Item $test
   Write-Host "test\widget_test.dart (modele Flutter) supprime" -ForegroundColor Green
 }
+
+# Icône de l'application (le « B » BALLAL)
+foreach ($d in @("mdpi","hdpi","xhdpi","xxhdpi","xxxhdpi")) {
+  $target = "android\app\src\main\res\mipmap-$d"
+  if (Test-Path $target) { Copy-Item "tool\icons\ic_launcher_$d.png" "$target\ic_launcher.png" -Force }
+}
+Write-Host "Android : icône BALLAL installée"

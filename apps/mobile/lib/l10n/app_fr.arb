@@ -9,16 +9,16 @@
   "plusHintClient": "Choisissez un professionnel pour lui envoyer une demande.",
   "onb1Title": "Trouvez facilement des services près de vous",
   "onb1Text": "Plombiers, électriciens, coiffeurs, développeurs… Rapide, fiable et proche de vous.",
-  "onb2Title": "Discutez directement dans BALLAL",
-  "onb2Text": "Échangez avec les professionnels sans partager tout de suite votre numéro.",
-  "onb3Title": "Des avis vérifiés",
-  "onb3Text": "Seuls les clients ayant fait appel à un professionnel peuvent laisser un avis.",
+  "onb2Title": "Des professionnels de confiance",
+  "onb2Text": "Plombiers, électriciens, maçons… Comparez les avis et discutez directement dans BALLAL.",
+  "onb3Title": "Tous les métiers, près de chez vous",
+  "onb3Text": "Beauté, cuisine, santé, livraison… Créez votre compte et trouvez le bon pro en quelques secondes.",
   "skip": "Passer",
   "next": "Suivant",
   "start": "Commencer",
   "haveAccountLogin": "J'ai déjà un compte · Se connecter",
   "welcomeTitle": "Bienvenue !",
-  "loginSubtitle": "Connectez-vous avec votre adresse e-mail.",
+  "loginSubtitle": "Connectez-vous ou créez votre compte pour continuer.",
   "phoneLabel": "Numéro de téléphone",
   "phoneInvalid": "Numéro invalide. Exemple : 620 00 00 00",
   "otpInfo": "Vous allez recevoir un code par e-mail. Pas de mot de passe à retenir.",
@@ -550,5 +550,15 @@
     }
   },
   "validate": "Valider",
-  "zoneNameHint": "Nom du quartier"
+  "zoneNameHint": "Nom du quartier",
+  "onb1Tagline": "Rapide · Fiable · Proche de vous",
+  "otpSubtitle6": "Entrez le code à 6 chiffres envoyé à {email}",
+  "@otpSubtitle6": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "bannerCta": "Découvrir"
 }

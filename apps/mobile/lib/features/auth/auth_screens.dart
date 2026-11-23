@@ -10,6 +10,7 @@ import '../../core/supa.dart';
 import '../../core/theme.dart';
 import '../../data/repositories.dart';
 import '../../widgets/common.dart';
+import '../onboarding/onboarding_screen.dart';
 
 /// Connexion par code reçu par e-mail — gratuit, sans mot de passe.
 /// (Le téléphone / WhatsApp pourra être réactivé plus tard via AccountRepo.sendOtp.)
@@ -55,45 +56,88 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final l = context.l10n;
+    final h = MediaQuery.of(context).size.height;
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(backgroundColor: Colors.white),
-      body: SafeArea(
-        child: ListView(padding: const EdgeInsets.all(24), children: [
-          const BallalLogo(size: 32),
-          const SizedBox(height: 28),
-          Text(l.welcomeTitle, style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w800)),
-          const SizedBox(height: 6),
-          Text(l.loginSubtitle, style: const TextStyle(color: BallalColors.muted, fontSize: 15)),
-          const SizedBox(height: 28),
-          Text(l.emailLabel, style: const TextStyle(fontWeight: FontWeight.w600)),
-          const SizedBox(height: 8),
-          TextField(
-            controller: _email,
-            keyboardType: TextInputType.emailAddress,
-            autofillHints: const [AutofillHints.email],
-            autocorrect: false,
-            textInputAction: TextInputAction.done,
-            onSubmitted: (_) => _submit(),
-            decoration: InputDecoration(
-              prefixIcon: const Icon(Icons.mail_outline),
-              hintText: 'nom@exemple.com',
-              errorText: _error,
+      body: ListView(padding: EdgeInsets.zero, children: [
+        // Photo d'accueil sur la vague bleue, logo en haut à droite (maquette).
+        BallalWave(
+          height: (h * 0.42).clamp(280.0, 380.0),
+          child: Stack(children: [
+            Positioned(
+              left: 0,
+              bottom: 18,
+              top: MediaQuery.of(context).padding.top + 24,
+              child: TweenAnimationBuilder<double>(
+                tween: Tween(begin: 0, end: 1),
+                duration: const Duration(milliseconds: 700),
+                curve: Curves.easeOutCubic,
+                builder: (_, v, child) => Opacity(
+                  opacity: v,
+                  child: Transform.translate(offset: Offset(-30 * (1 - v), 0), child: child),
+                ),
+                child: Image.asset('assets/people/woman_phone.png', fit: BoxFit.contain, filterQuality: FilterQuality.medium),
+              ),
             ),
+            Positioned(
+              right: 16,
+              top: MediaQuery.of(context).padding.top + 70,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14)),
+                child: const BallalLogo(size: 22),
+              ),
+            ),
+          ]),
+        ),
+        FadeSlideIn(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              Text(l.welcomeTitle, style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w800, color: BallalColors.primaryDark)),
+              const SizedBox(height: 4),
+              Text(l.loginSubtitle, style: const TextStyle(color: BallalColors.muted, fontSize: 15)),
+              const SizedBox(height: 24),
+              TextField(
+                controller: _email,
+                keyboardType: TextInputType.emailAddress,
+                autofillHints: const [AutofillHints.email],
+                autocorrect: false,
+                textInputAction: TextInputAction.done,
+                onSubmitted: (_) => _submit(),
+                decoration: InputDecoration(
+                  prefixIcon: const Icon(Icons.person_outline_rounded),
+                  hintText: l.emailLabel,
+                  errorText: _error,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Row(children: [
+                const Icon(Icons.lock_outline_rounded, size: 16, color: BallalColors.muted),
+                const SizedBox(width: 6),
+                Expanded(child: Text(l.otpInfo, style: const TextStyle(color: BallalColors.muted, fontSize: 13))),
+              ]),
+              const SizedBox(height: 24),
+              FilledButton(
+                onPressed: _loading ? null : _submit,
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 200),
+                  child: _loading
+                      ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white))
+                      : Row(mainAxisSize: MainAxisSize.min, children: [
+                          Text(l.receiveCode),
+                          const SizedBox(width: 8),
+                          const Icon(Icons.arrow_forward_rounded, size: 20),
+                        ]),
+                ),
+              ),
+              const SizedBox(height: 18),
+              Text(l.termsNotice, textAlign: TextAlign.center, style: const TextStyle(color: BallalColors.muted, fontSize: 12)),
+              TextButton(onPressed: () => context.push('/about'), child: Text(l.about)),
+            ]),
           ),
-          const SizedBox(height: 8),
-          Text(l.otpInfo, style: const TextStyle(color: BallalColors.muted, fontSize: 13)),
-          const SizedBox(height: 28),
-          FilledButton(
-            onPressed: _loading ? null : _submit,
-            child: _loading
-                ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white))
-                : Text(l.receiveCode),
-          ),
-          const SizedBox(height: 16),
-          Text(l.termsNotice, textAlign: TextAlign.center, style: const TextStyle(color: BallalColors.muted, fontSize: 12)),
-        ]),
-      ),
+        ),
+      ]),
     );
   }
 }
@@ -174,23 +218,22 @@ class _OtpScreenState extends State<OtpScreen> {
       appBar: AppBar(backgroundColor: Colors.white),
       body: SafeArea(
         child: ListView(padding: const EdgeInsets.all(24), children: [
+          Container(
+            width: 72,
+            height: 72,
+            alignment: Alignment.center,
+            decoration: const BoxDecoration(color: BallalColors.primarySoft, shape: BoxShape.circle),
+            child: const Icon(Icons.mark_email_read_outlined, color: BallalColors.primary, size: 36),
+          ),
+          const SizedBox(height: 18),
           Text(l.otpTitle, style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w800)),
           const SizedBox(height: 8),
-          Text(l.otpSubtitleEmail(widget.email), style: const TextStyle(color: BallalColors.muted, fontSize: 15)),
+          Text(l.otpSubtitle6(widget.email), style: const TextStyle(color: BallalColors.muted, fontSize: 15)),
           const SizedBox(height: 28),
-          TextField(
-            controller: _code,
-            autofocus: true,
-            keyboardType: TextInputType.number,
-            autofillHints: const [AutofillHints.oneTimeCode],
-            maxLength: 8,
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 28, letterSpacing: 10, fontWeight: FontWeight.w700),
-            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-            onChanged: (_) => setState(() {}),
-            onSubmitted: (_) => _verify(),
-            decoration: const InputDecoration(counterText: '', hintText: '••••••'),
-          ),
+          _CodeBoxes(controller: _code, onChanged: () {
+            setState(() {});
+            if (_code.text.length == 6) _verify();
+          }),
           const SizedBox(height: 8),
           Text(l.checkSpam, textAlign: TextAlign.center, style: const TextStyle(color: BallalColors.muted, fontSize: 12)),
           const SizedBox(height: 20),
@@ -210,6 +253,83 @@ class _OtpScreenState extends State<OtpScreen> {
           TextButton(onPressed: () => context.pop(), child: Text(l.changeEmail)),
         ]),
       ),
+    );
+  }
+}
+
+/// Six cases pour le code reçu par e-mail (saisie, collage et remplissage automatique).
+class _CodeBoxes extends StatefulWidget {
+  const _CodeBoxes({required this.controller, required this.onChanged});
+  final TextEditingController controller;
+  final VoidCallback onChanged;
+
+  @override
+  State<_CodeBoxes> createState() => _CodeBoxesState();
+}
+
+class _CodeBoxesState extends State<_CodeBoxes> {
+  final _focus = FocusNode();
+
+  @override
+  void dispose() {
+    _focus.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final text = widget.controller.text;
+    return GestureDetector(
+      onTap: () => _focus.requestFocus(),
+      child: Stack(alignment: Alignment.center, children: [
+        // Champ invisible qui reçoit réellement la saisie.
+        Opacity(
+          opacity: 0,
+          child: TextField(
+            controller: widget.controller,
+            focusNode: _focus,
+            autofocus: true,
+            keyboardType: TextInputType.number,
+            autofillHints: const [AutofillHints.oneTimeCode],
+            maxLength: 6,
+            showCursor: false,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(6)],
+            onChanged: (_) => widget.onChanged(),
+            decoration: const InputDecoration(counterText: ''),
+          ),
+        ),
+        IgnorePointer(
+          child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+            for (var i = 0; i < 6; i++)
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: AnimatedContainer(
+                duration: const Duration(milliseconds: 180),
+                curve: Curves.easeOut,
+                height: 58,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: i < text.length ? BallalColors.primarySoft : BallalColors.field,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: i == text.length ? BallalColors.primary : Colors.transparent,
+                    width: 1.6,
+                  ),
+                ),
+                child: AnimatedScale(
+                  scale: i < text.length ? 1 : 0.4,
+                  duration: const Duration(milliseconds: 180),
+                  curve: Curves.easeOutBack,
+                  child: Text(i < text.length ? text[i] : '',
+                      style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: BallalColors.primaryDark)),
+                ),
+                  ),
+                ),
+              ),
+          ]),
+        ),
+      ]),
     );
   }
 }

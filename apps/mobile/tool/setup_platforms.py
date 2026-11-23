@@ -52,3 +52,25 @@ default_test = ROOT / "test/widget_test.dart"
 if default_test.exists() and "MyApp" in default_test.read_text(encoding="utf-8"):
     default_test.unlink()
     print("test/widget_test.dart (modèle Flutter) supprimé")
+
+# ─── Icône de l'application (le « B » BALLAL) ───
+import shutil
+icons = ROOT / "tool/icons"
+res = ROOT / "android/app/src/main/res"
+if res.exists():
+    for d in ("mdpi", "hdpi", "xhdpi", "xxhdpi", "xxxhdpi"):
+        target = res / f"mipmap-{d}"
+        target.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(icons / f"ic_launcher_{d}.png", target / "ic_launcher.png")
+    print("Android : icône BALLAL installée")
+appicon = ROOT / "ios/Runner/Assets.xcassets/AppIcon.appiconset"
+if appicon.exists():
+    try:
+        from PIL import Image  # facultatif
+        src = Image.open(icons / "icon_512.png")
+        for f in appicon.glob("*.png"):
+            w, h = Image.open(f).size
+            src.resize((w, h)).convert("RGB").save(f)
+        print("iOS : icône BALLAL installée")
+    except Exception as e:  # noqa: BLE001
+        print(f"iOS : icône non remplacée ({e})")

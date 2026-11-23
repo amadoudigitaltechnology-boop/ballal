@@ -352,6 +352,7 @@ class _ClientHomeState extends State<ClientHome> {
   }
 }
 
+/// Bannière bleue avec l'homme « pouce levé » (maquette).
 class _Banner extends StatelessWidget {
   const _Banner({required this.onTap});
   final VoidCallback onTap;
@@ -359,33 +360,64 @@ class _Banner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = context.l10n;
-    return Container(
-      margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        gradient: const LinearGradient(colors: [BallalColors.primary, BallalColors.primaryDark]),
-      ),
-      child: Row(children: [
-        Expanded(
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(l.bannerTitle, style: const TextStyle(color: Colors.white, fontSize: 19, fontWeight: FontWeight.w800, height: 1.25)),
-            const SizedBox(height: 14),
-            FilledButton.icon(
-              style: FilledButton.styleFrom(
-                backgroundColor: BallalColors.accent,
-                minimumSize: const Size(0, 42),
-                padding: const EdgeInsets.symmetric(horizontal: 18),
-              ),
-              onPressed: onTap,
-              icon: const Icon(Icons.near_me_rounded, size: 18),
-              label: Text(l.nearMe),
-            ),
-          ]),
+    return FadeSlideIn(
+      child: Container(
+        height: 168,
+        margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(22),
+          gradient: const LinearGradient(colors: [BallalColors.primary, BallalColors.primaryDark]),
+          boxShadow: [BoxShadow(color: BallalColors.primary.withValues(alpha: 0.25), blurRadius: 18, offset: const Offset(0, 8))],
         ),
-        const SizedBox(width: 8),
-        Icon(Icons.handshake_rounded, size: 72, color: Colors.white.withValues(alpha: 0.9)),
-      ]),
+        clipBehavior: Clip.antiAlias,
+        child: Stack(children: [
+          Positioned(
+            right: -30,
+            bottom: -50,
+            child: Container(
+              width: 190,
+              height: 190,
+              decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white.withValues(alpha: 0.08)),
+            ),
+          ),
+          Positioned(
+            right: 0,
+            bottom: 0,
+            top: 8,
+            child: TweenAnimationBuilder<double>(
+              tween: Tween(begin: 0, end: 1),
+              duration: const Duration(milliseconds: 650),
+              curve: Curves.easeOutCubic,
+              builder: (_, v, child) => Opacity(opacity: v, child: Transform.translate(offset: Offset(30 * (1 - v), 0), child: child)),
+              child: Image.asset('assets/people/business.png', fit: BoxFit.contain, filterQuality: FilterQuality.medium),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 20, 0, 18),
+            child: SizedBox(
+              width: MediaQuery.of(context).size.width * 0.5,
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(l.bannerTitle,
+                    style: const TextStyle(color: Colors.white, fontSize: 19, fontWeight: FontWeight.w800, height: 1.25)),
+                const Spacer(),
+                FilledButton(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: BallalColors.accent,
+                    minimumSize: const Size(0, 40),
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                  ),
+                  onPressed: onTap,
+                  child: Row(mainAxisSize: MainAxisSize.min, children: [
+                    Text(l.bannerCta),
+                    const SizedBox(width: 6),
+                    const Icon(Icons.arrow_forward_rounded, size: 18),
+                  ]),
+                ),
+              ]),
+            ),
+          ),
+        ]),
+      ),
     );
   }
 }
