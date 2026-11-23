@@ -17,7 +17,7 @@ class SplashScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: Colors.white,
       body: Stack(children: [
-        const Positioned(left: 0, right: 0, bottom: 0, child: ConakryPhoto(height: 340)),
+        const Positioned(left: 0, right: 0, bottom: 0, child: ConakrySkyline(height: 300)),
         SafeArea(
           child: Column(children: [
             const Spacer(flex: 2),

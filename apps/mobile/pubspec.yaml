@@ -39,7 +39,6 @@ flutter:
   generate: true
   assets:
     - assets/logo_ballal.png
-    - assets/conakry.jpg
     - assets/people/
   fonts:
     - family: Sora
