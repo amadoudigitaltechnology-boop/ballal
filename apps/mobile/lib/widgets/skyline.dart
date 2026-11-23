@@ -202,3 +202,78 @@ class _SwooshPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
+
+
+/// Photo aérienne de Conakry (fondue vers le blanc en haut) + vagues BALLAL animées en bas.
+class ConakryPhoto extends StatefulWidget {
+  const ConakryPhoto({super.key, this.height = 320});
+  final double height;
+
+  @override
+  State<ConakryPhoto> createState() => _ConakryPhotoState();
+}
+
+class _ConakryPhotoState extends State<ConakryPhoto> with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(vsync: this, duration: const Duration(seconds: 6))..repeat();
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: widget.height,
+      width: double.infinity,
+      child: Stack(fit: StackFit.expand, children: [
+        ShaderMask(
+          blendMode: BlendMode.dstIn,
+          shaderCallback: (r) => const LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Colors.transparent, Colors.black],
+            stops: [0, 0.35],
+          ).createShader(r),
+          child: TweenAnimationBuilder<double>(
+            tween: Tween(begin: 1.08, end: 1),
+            duration: const Duration(seconds: 3),
+            curve: Curves.easeOut,
+            builder: (_, v, child) => Transform.scale(scale: v, child: child),
+            child: Image.asset('assets/conakry.jpg', fit: BoxFit.cover, alignment: Alignment.center),
+          ),
+        ),
+        AnimatedBuilder(animation: _c, builder: (_, __) => CustomPaint(painter: _WavesPainter(_c.value))),
+      ]),
+    );
+  }
+}
+
+class _WavesPainter extends CustomPainter {
+  _WavesPainter(this.t);
+  final double t;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = size.width;
+    final h = size.height;
+    ui.Path wave(double base, double amp, double phase) {
+      final p = ui.Path()..moveTo(0, h);
+      p.lineTo(0, base);
+      for (var px = 0.0; px <= w; px += 6) {
+        p.lineTo(px, base + math.sin(px / w * 2 * math.pi + phase) * amp);
+      }
+      p.lineTo(w, h);
+      return p..close();
+    }
+
+    final ph = t * 2 * math.pi;
+    canvas.drawPath(wave(h * 0.86, 7, ph), Paint()..color = BallalColors.accent);
+    canvas.drawPath(wave(h * 0.9, 6, ph + 1.4), Paint()..color = BallalColors.primaryDark);
+    canvas.drawPath(wave(h * 0.95, 5, ph + 2.6), Paint()..color = BallalColors.primary);
+  }
+
+  @override
+  bool shouldRepaint(covariant _WavesPainter old) => old.t != t;
+}
