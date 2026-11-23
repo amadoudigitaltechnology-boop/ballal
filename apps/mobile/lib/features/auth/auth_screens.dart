@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
-import 'package:supabase_flutter/supabase_flutter.dart' show OAuthProvider, LaunchMode;
+import 'package:supabase_flutter/supabase_flutter.dart' hide Session;
 
 import '../../core/formatters.dart';
 import '../../core/session.dart';
