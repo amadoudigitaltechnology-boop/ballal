@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide Session;
 
 import '../../core/formatters.dart';
@@ -25,13 +26,87 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final _email = TextEditingController();
+  final _password = TextEditingController();
+  final _confirm = TextEditingController();
   bool _loading = false;
+  bool _signup = false;
+  bool _obscure = true;
   String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    // L'application se souvient du dernier e-mail utilisé.
+    SharedPreferences.getInstance().then((p) {
+      final last = p.getString('last_email');
+      if (last != null && mounted && _email.text.isEmpty) setState(() => _email.text = last);
+    });
+  }
 
   @override
   void dispose() {
     _email.dispose();
+    _password.dispose();
+    _confirm.dispose();
     super.dispose();
+  }
+
+  Future<void> _remember(String email) async {
+    final p = await SharedPreferences.getInstance();
+    await p.setString('last_email', email);
+  }
+
+  /// Connexion ou création de compte avec e-mail + mot de passe.
+  Future<void> _passwordSubmit() async {
+    final l = context.l10n;
+    final email = normalizeEmail(_email.text);
+    if (email == null) {
+      setState(() => _error = l.emailInvalid);
+      return;
+    }
+    if (_password.text.length < 8) {
+      showInfo(context, l.passwordTooShort);
+      return;
+    }
+    if (_signup && _password.text != _confirm.text) {
+      showInfo(context, l.passwordsDontMatch);
+      return;
+    }
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      if (_signup) {
+        final needsCode = await AccountRepo.instance.signUpWithPassword(email, _password.text);
+        TextInput.finishAutofillContext(); // propose d'enregistrer l'identifiant dans le téléphone
+        await _remember(email);
+        if (needsCode && mounted) context.push('/otp', extra: {'email': email, 'mode': 'signup'});
+      } else {
+        await AccountRepo.instance.signInWithPassword(email, _password.text);
+        TextInput.finishAutofillContext();
+        await _remember(email);
+      }
+      // La suite (profil à compléter ou accueil) est gérée par le routeur.
+    } on AuthException catch (e) {
+      if (!mounted) return;
+      final m = e.message.toLowerCase();
+      if (m.contains('already_registered') || m.contains('already registered')) {
+        showInfo(context, l.emailAlreadyUsed);
+        setState(() => _signup = false);
+      } else if (m.contains('invalid login') || m.contains('invalid credentials')) {
+        showInfo(context, l.wrongPassword);
+      } else if (m.contains('not confirmed')) {
+        await AccountRepo.instance.resendSignupCode(email);
+        if (mounted) context.push('/otp', extra: {'email': email, 'mode': 'signup'});
+      } else {
+        showError(context, e);
+      }
+    } catch (e) {
+      if (mounted) showError(context, e);
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
   }
 
   bool _google = false;
@@ -68,7 +143,8 @@ class _LoginScreenState extends State<LoginScreen> {
     });
     try {
       await AccountRepo.instance.sendEmailOtp(email);
-      if (mounted) context.push('/otp', extra: email);
+      await _remember(email);
+      if (mounted) context.push('/otp', extra: {'email': email, 'mode': 'login'});
     } catch (e) {
       if (mounted) showError(context, e);
     } finally {
@@ -132,41 +208,119 @@ class _LoginScreenState extends State<LoginScreen> {
             child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
               Text(l.welcomeTitle, style: displayStyle(30, color: BallalColors.primaryDark)),
               const SizedBox(height: 4),
-              Text(l.loginSubtitle, style: const TextStyle(color: BallalColors.muted, fontSize: 15)),
-              const SizedBox(height: 24),
-              TextField(
-                controller: _email,
-                keyboardType: TextInputType.emailAddress,
-                autofillHints: const [AutofillHints.email],
-                autocorrect: false,
-                textInputAction: TextInputAction.done,
-                onSubmitted: (_) => _submit(),
-                decoration: InputDecoration(
-                  prefixIcon: const Icon(Icons.person_outline_rounded),
-                  hintText: l.emailLabel,
-                  errorText: _error,
-                ),
+              Text(_signup ? l.signupSubtitle : l.loginSubtitle, style: const TextStyle(color: BallalColors.muted, fontSize: 15)),
+              const SizedBox(height: 18),
+              // Bascule Se connecter / Créer un compte (pastille animée).
+              Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(color: BallalColors.field, borderRadius: BorderRadius.circular(16)),
+                child: Row(children: [
+                  for (final signup in [false, true])
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () => setState(() => _signup = signup),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 220),
+                          curve: Curves.easeOutCubic,
+                          padding: const EdgeInsets.symmetric(vertical: 11),
+                          decoration: BoxDecoration(
+                            color: _signup == signup ? Colors.white : Colors.transparent,
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: _signup == signup
+                                ? [BoxShadow(color: BallalColors.primary.withValues(alpha: 0.12), blurRadius: 10, offset: const Offset(0, 3))]
+                                : null,
+                          ),
+                          child: Text(
+                            signup ? l.tabSignup : l.tabLogin,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontWeight: FontWeight.w800,
+                              color: _signup == signup ? BallalColors.primary : BallalColors.muted,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                ]),
               ),
-              const SizedBox(height: 10),
-              Row(children: [
-                const Icon(Icons.lock_outline_rounded, size: 16, color: BallalColors.muted),
-                const SizedBox(width: 6),
-                Expanded(child: Text(l.otpInfo, style: const TextStyle(color: BallalColors.muted, fontSize: 13))),
-              ]),
-              const SizedBox(height: 24),
+              const SizedBox(height: 18),
+              AutofillGroup(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                  TextField(
+                    controller: _email,
+                    keyboardType: TextInputType.emailAddress,
+                    autofillHints: const [AutofillHints.email, AutofillHints.username],
+                    autocorrect: false,
+                    textInputAction: TextInputAction.next,
+                    decoration: InputDecoration(
+                      prefixIcon: const Icon(Icons.alternate_email_rounded),
+                      hintText: l.emailLabel,
+                      errorText: _error,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _password,
+                    obscureText: _obscure,
+                    autofillHints: [_signup ? AutofillHints.newPassword : AutofillHints.password],
+                    textInputAction: _signup ? TextInputAction.next : TextInputAction.done,
+                    onSubmitted: (_) => _signup ? null : _passwordSubmit(),
+                    decoration: InputDecoration(
+                      prefixIcon: const Icon(Icons.lock_outline_rounded),
+                      hintText: _signup ? '${l.passwordLabel} (${l.passwordHint})' : l.passwordLabel,
+                      suffixIcon: IconButton(
+                        icon: Icon(_obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined),
+                        onPressed: () => setState(() => _obscure = !_obscure),
+                      ),
+                    ),
+                  ),
+                  AnimatedSize(
+                    duration: const Duration(milliseconds: 240),
+                    curve: Curves.easeOutCubic,
+                    child: !_signup
+                        ? const SizedBox(width: double.infinity)
+                        : Padding(
+                            padding: const EdgeInsets.only(top: 12),
+                            child: TextField(
+                              controller: _confirm,
+                              obscureText: _obscure,
+                              autofillHints: const [AutofillHints.newPassword],
+                              textInputAction: TextInputAction.done,
+                              onSubmitted: (_) => _passwordSubmit(),
+                              decoration: InputDecoration(
+                                prefixIcon: const Icon(Icons.lock_reset_rounded),
+                                hintText: l.confirmPassword,
+                              ),
+                            ),
+                          ),
+                  ),
+                ]),
+              ),
+              if (!_signup)
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    onPressed: () => context.push('/forgot-password', extra: normalizeEmail(_email.text)),
+                    child: Text(l.forgotPassword),
+                  ),
+                )
+              else
+                const SizedBox(height: 16),
               FilledButton(
-                onPressed: _loading ? null : _submit,
+                onPressed: _loading ? null : _passwordSubmit,
                 child: AnimatedSwitcher(
                   duration: const Duration(milliseconds: 200),
                   child: _loading
                       ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white))
-                      : Row(mainAxisSize: MainAxisSize.min, children: [
-                          Text(l.receiveCode),
+                      : Row(key: ValueKey(_signup), mainAxisSize: MainAxisSize.min, children: [
+                          Text(_signup ? l.tabSignup : l.tabLogin),
                           const SizedBox(width: 8),
                           const Icon(Icons.arrow_forward_rounded, size: 20),
                         ]),
                 ),
               ),
+              if (!_signup)
+                TextButton(onPressed: _loading ? null : _submit, child: Text(l.loginWithCode)),
               const SizedBox(height: 16),
               Row(children: [
                 const Expanded(child: Divider()),
@@ -197,8 +351,10 @@ class _LoginScreenState extends State<LoginScreen> {
 }
 
 class OtpScreen extends StatefulWidget {
-  const OtpScreen({super.key, required this.email});
+  const OtpScreen({super.key, required this.email, this.mode = 'login'});
   final String email;
+  /// 'login' (code de connexion), 'signup' (confirmation d'inscription), 'recovery' (mot de passe oublié).
+  final String mode;
 
   @override
   State<OtpScreen> createState() => _OtpScreenState();
@@ -243,8 +399,10 @@ class _OtpScreenState extends State<OtpScreen> {
     setState(() => _loading = true);
     _attempts++;
     try {
-      await AccountRepo.instance.verifyEmailOtp(widget.email, code);
-      // La redirection (profil à compléter ou accueil) est gérée par le routeur.
+      await AccountRepo.instance.verifyEmailOtp(widget.email, code, mode: widget.mode);
+      // Mot de passe oublié : on choisit tout de suite le nouveau mot de passe.
+      if (widget.mode == 'recovery' && mounted) context.go('/new-password');
+      // Sinon la redirection (profil à compléter ou accueil) est gérée par le routeur.
     } catch (e) {
       _code.clear();
       if (mounted) showError(context, e);
@@ -255,7 +413,14 @@ class _OtpScreenState extends State<OtpScreen> {
 
   Future<void> _resend() async {
     try {
-      await AccountRepo.instance.sendEmailOtp(widget.email);
+      switch (widget.mode) {
+        case 'signup':
+          await AccountRepo.instance.resendSignupCode(widget.email);
+        case 'recovery':
+          await AccountRepo.instance.sendPasswordReset(widget.email);
+        default:
+          await AccountRepo.instance.sendEmailOtp(widget.email);
+      }
       _attempts = 0;
       _startCooldown();
       if (mounted) showInfo(context, context.l10n.codeResent);
@@ -561,4 +726,196 @@ class _GPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+
+/// Mot de passe oublié : on envoie un code à 6 chiffres par e-mail.
+class ForgotPasswordScreen extends StatefulWidget {
+  const ForgotPasswordScreen({super.key});
+
+  @override
+  State<ForgotPasswordScreen> createState() => _ForgotPasswordScreenState();
+}
+
+class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
+  final _email = TextEditingController();
+  bool _loading = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_email.text.isEmpty) {
+      final initial = GoRouterState.of(context).extra;
+      if (initial is String) _email.text = initial;
+    }
+  }
+
+  @override
+  void dispose() {
+    _email.dispose();
+    super.dispose();
+  }
+
+  Future<void> _send() async {
+    final l = context.l10n;
+    final email = normalizeEmail(_email.text);
+    if (email == null) {
+      showInfo(context, l.emailInvalid);
+      return;
+    }
+    setState(() => _loading = true);
+    try {
+      await AccountRepo.instance.sendPasswordReset(email);
+      if (mounted) context.push('/otp', extra: {'email': email, 'mode': 'recovery'});
+    } catch (e) {
+      if (mounted) showError(context, e);
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = context.l10n;
+    return Scaffold(
+      backgroundColor: Colors.white,
+      appBar: AppBar(backgroundColor: Colors.white),
+      body: SafeArea(
+        child: ListView(padding: const EdgeInsets.all(24), children: [
+          Container(
+            width: 72,
+            height: 72,
+            alignment: Alignment.center,
+            decoration: const BoxDecoration(color: BallalColors.accentSoft, shape: BoxShape.circle),
+            child: const Icon(Icons.key_rounded, color: BallalColors.accent, size: 34),
+          ),
+          const SizedBox(height: 18),
+          Text(l.forgotTitle, style: displayStyle(26, color: BallalColors.primaryDark)),
+          const SizedBox(height: 8),
+          Text(l.forgotText, style: const TextStyle(color: BallalColors.muted, fontSize: 15)),
+          const SizedBox(height: 24),
+          TextField(
+            controller: _email,
+            keyboardType: TextInputType.emailAddress,
+            autofillHints: const [AutofillHints.email],
+            autocorrect: false,
+            onSubmitted: (_) => _send(),
+            decoration: InputDecoration(prefixIcon: const Icon(Icons.alternate_email_rounded), hintText: l.emailLabel),
+          ),
+          const SizedBox(height: 20),
+          FilledButton(
+            onPressed: _loading ? null : _send,
+            child: _loading
+                ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white))
+                : Text(l.sendCode),
+          ),
+        ]),
+      ),
+    );
+  }
+}
+
+/// Choisir (ou changer) son mot de passe — après « Mot de passe oublié » ou depuis les Paramètres.
+class NewPasswordScreen extends StatefulWidget {
+  const NewPasswordScreen({super.key});
+
+  @override
+  State<NewPasswordScreen> createState() => _NewPasswordScreenState();
+}
+
+class _NewPasswordScreenState extends State<NewPasswordScreen> {
+  final _password = TextEditingController();
+  final _confirm = TextEditingController();
+  bool _obscure = true;
+  bool _loading = false;
+
+  @override
+  void dispose() {
+    _password.dispose();
+    _confirm.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    final l = context.l10n;
+    if (_password.text.length < 8) {
+      showInfo(context, l.passwordTooShort);
+      return;
+    }
+    if (_password.text != _confirm.text) {
+      showInfo(context, l.passwordsDontMatch);
+      return;
+    }
+    setState(() => _loading = true);
+    try {
+      await AccountRepo.instance.updatePassword(_password.text);
+      TextInput.finishAutofillContext();
+      if (!mounted) return;
+      showInfo(context, l.passwordSaved);
+      if (Navigator.of(context).canPop()) {
+        context.pop();
+      } else {
+        context.go('/home');
+      }
+    } catch (e) {
+      if (mounted) showError(context, e);
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = context.l10n;
+    return Scaffold(
+      backgroundColor: Colors.white,
+      appBar: AppBar(backgroundColor: Colors.white),
+      body: SafeArea(
+        child: AutofillGroup(
+          child: ListView(padding: const EdgeInsets.all(24), children: [
+            Container(
+              width: 72,
+              height: 72,
+              alignment: Alignment.center,
+              decoration: const BoxDecoration(color: BallalColors.primarySoft, shape: BoxShape.circle),
+              child: const Icon(Icons.lock_reset_rounded, color: BallalColors.primary, size: 34),
+            ),
+            const SizedBox(height: 18),
+            Text(l.newPasswordTitle, style: displayStyle(26, color: BallalColors.primaryDark)),
+            const SizedBox(height: 8),
+            Text(l.newPasswordText, style: const TextStyle(color: BallalColors.muted, fontSize: 15)),
+            const SizedBox(height: 24),
+            TextField(
+              controller: _password,
+              obscureText: _obscure,
+              autofillHints: const [AutofillHints.newPassword],
+              decoration: InputDecoration(
+                prefixIcon: const Icon(Icons.lock_outline_rounded),
+                hintText: '${l.passwordLabel} (${l.passwordHint})',
+                suffixIcon: IconButton(
+                  icon: Icon(_obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined),
+                  onPressed: () => setState(() => _obscure = !_obscure),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _confirm,
+              obscureText: _obscure,
+              autofillHints: const [AutofillHints.newPassword],
+              onSubmitted: (_) => _save(),
+              decoration: InputDecoration(prefixIcon: const Icon(Icons.lock_reset_rounded), hintText: l.confirmPassword),
+            ),
+            const SizedBox(height: 22),
+            FilledButton(
+              onPressed: _loading ? null : _save,
+              child: _loading
+                  ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white))
+                  : Text(l.save),
+            ),
+          ]),
+        ),
+      ),
+    );
+  }
 }

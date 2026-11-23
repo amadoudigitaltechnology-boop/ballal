@@ -79,6 +79,33 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  void _myData() {
+    final l = context.l10n;
+    showModalBottomSheet<void>(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(l.myData, style: displayStyle(18)),
+            const SizedBox(height: 8),
+            Text(l.deleteAccountText, style: const TextStyle(color: BallalColors.muted)),
+            const SizedBox(height: 12),
+            TextButton.icon(
+              style: TextButton.styleFrom(foregroundColor: BallalColors.danger),
+              onPressed: () {
+                Navigator.pop(ctx);
+                _deleteAccount();
+              },
+              icon: const Icon(Icons.delete_outline_rounded),
+              label: Text(l.deleteAccount),
+            ),
+          ]),
+        ),
+      ),
+    );
+  }
+
   Future<void> _deleteAccount() async {
     final l = context.l10n;
     final ok = await showDialog<bool>(
@@ -130,8 +157,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                   ListTile(
                     leading: const Icon(Icons.lock_outline_rounded),
-                    title: Text(l.password),
-                    subtitle: Text(l.noPasswordNeeded),
+                    title: Text(l.changePassword),
+                    subtitle: Text(l.changePasswordHint),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => context.push('/new-password'),
                   ),
                   if (Session.instance.hasProRole) ...[
                     _header(l.proSpace),
@@ -219,17 +248,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () => context.push('/about'),
                   ),
-                  _header(l.account),
-                  ListTile(
-                    leading: const Icon(Icons.logout_rounded),
-                    title: Text(l.logout),
-                    onTap: () => Session.instance.signOut(),
+                  const SizedBox(height: 24),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: BallalColors.danger,
+                        side: const BorderSide(color: BallalColors.danger),
+                        minimumSize: const Size(64, 52),
+                      ),
+                      onPressed: () => Session.instance.signOut(),
+                      icon: const Icon(Icons.logout_rounded),
+                      label: Text(l.logout),
+                    ),
                   ),
-                  ListTile(
-                    leading: const Icon(Icons.delete_forever_outlined, color: BallalColors.danger),
-                    title: Text(l.deleteAccount, style: const TextStyle(color: BallalColors.danger)),
-                    onTap: _deleteAccount,
+                  // Exigence Google Play : la suppression du compte doit rester possible dans l'application.
+                  // Elle est rangée discrètement dans « Mes données ».
+                  Center(
+                    child: TextButton(
+                      onPressed: _myData,
+                      child: Text(l.myData, style: const TextStyle(color: BallalColors.muted, fontSize: 12)),
+                    ),
                   ),
+                  const SizedBox(height: 24),
                 ]),
     );
   }

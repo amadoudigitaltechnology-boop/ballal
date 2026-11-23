@@ -692,8 +692,35 @@ class AccountRepo {
   /// Connexion par code reçu par e-mail (gratuit).
   Future<void> sendEmailOtp(String email) => supa.auth.signInWithOtp(email: email, shouldCreateUser: true);
 
-  Future<void> verifyEmailOtp(String email, String code) async {
-    await supa.auth.verifyOTP(type: OtpType.email, email: email, token: code);
+  Future<void> verifyEmailOtp(String email, String code, {String mode = 'login'}) async {
+    final type = switch (mode) {
+      'signup' => OtpType.signup,
+      'recovery' => OtpType.recovery,
+      _ => OtpType.email,
+    };
+    await supa.auth.verifyOTP(type: type, email: email, token: code);
+  }
+
+  // ───── Mot de passe ─────
+  Future<void> signInWithPassword(String email, String password) async {
+    await supa.auth.signInWithPassword(email: email, password: password);
+  }
+
+  /// Création de compte. Renvoie true si un code de confirmation a été envoyé par e-mail
+  /// (false = compte connecté immédiatement). Lève 'already_registered' si l'e-mail existe déjà.
+  Future<bool> signUpWithPassword(String email, String password) async {
+    final res = await supa.auth.signUp(email: email, password: password);
+    final identities = res.user?.identities;
+    if (res.user != null && identities != null && identities.isEmpty) throw const AuthException('already_registered');
+    return res.session == null;
+  }
+
+  Future<void> sendPasswordReset(String email) => supa.auth.resetPasswordForEmail(email);
+
+  Future<void> resendSignupCode(String email) => supa.auth.resend(type: OtpType.signup, email: email);
+
+  Future<void> updatePassword(String password) async {
+    await supa.auth.updateUser(UserAttributes(password: password));
   }
 
   /// Code par WhatsApp (moins cher et plus fiable en Guinée) ou par SMS.

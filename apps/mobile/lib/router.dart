@@ -23,7 +23,7 @@ import 'features/requests/request_form_screen.dart';
 import 'features/search/search_screen.dart';
 import 'features/shell/main_shell.dart';
 
-const _authRoutes = {'/welcome', '/login', '/otp'};
+const _authRoutes = {'/welcome', '/login', '/otp', '/forgot-password'};
 
 String? _redirect(BuildContext context, GoRouterState state) {
   final s = Session.instance;
@@ -51,7 +51,17 @@ GoRouter buildRouter() {
       GoRoute(path: '/splash', pageBuilder: (_, st) => motionPage(st, const SplashScreen(), Motion.fade)),
       GoRoute(path: '/welcome', pageBuilder: (_, st) => motionPage(st, const OnboardingScreen(), Motion.fade)),
       GoRoute(path: '/login', pageBuilder: (_, st) => motionPage(st, const LoginScreen(), Motion.depth)),
-      GoRoute(path: '/otp', pageBuilder: (_, s) => motionPage(s, OtpScreen(email: s.extra as String? ?? ''), Motion.slide)),
+      GoRoute(
+        path: '/otp',
+        pageBuilder: (_, s) {
+          final x = s.extra;
+          final email = x is Map ? x['email'] as String? ?? '' : (x as String? ?? '');
+          final mode = x is Map ? x['mode'] as String? ?? 'login' : 'login';
+          return motionPage(s, OtpScreen(email: email, mode: mode), Motion.slide);
+        },
+      ),
+      GoRoute(path: '/forgot-password', pageBuilder: (_, st) => motionPage(st, const ForgotPasswordScreen(), Motion.slide)),
+      GoRoute(path: '/new-password', pageBuilder: (_, st) => motionPage(st, const NewPasswordScreen(), Motion.depth)),
       GoRoute(path: '/setup', pageBuilder: (_, st) => motionPage(st, const SetupScreen(), Motion.depth)),
       GoRoute(path: '/suspended', pageBuilder: (_, st) => motionPage(st, const SuspendedScreen(), Motion.fade)),
       StatefulShellRoute.indexedStack(
