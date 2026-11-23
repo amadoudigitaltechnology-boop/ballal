@@ -388,24 +388,29 @@ class _Banner extends StatelessWidget {
               decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white.withValues(alpha: 0.08)),
             ),
           ),
+          // Photo dans un cadre arrondi à bord blanc (fond studio clair, pas de détourage).
           Positioned(
-            right: 0,
-            bottom: 0,
-            top: 0,
-            width: MediaQuery.of(context).size.width * 0.46,
+            right: 14,
+            top: 14,
+            bottom: 14,
             child: TweenAnimationBuilder<double>(
               tween: Tween(begin: 0, end: 1),
               duration: const Duration(milliseconds: 650),
               curve: Curves.easeOutCubic,
-              builder: (_, v, child) => Opacity(opacity: v, child: Transform.translate(offset: Offset(30 * (1 - v), 0), child: child)),
-              // Photo entière, fondue dans le bleu de la bannière (pas de détourage).
-              child: ShaderMask(
-                blendMode: BlendMode.dstIn,
-                shaderCallback: (r) => const LinearGradient(
-                  colors: [Colors.transparent, Colors.black, Colors.black],
-                  stops: [0, 0.35, 1],
-                ).createShader(r),
-                child: Image.asset('assets/people/business.jpg', fit: BoxFit.cover, alignment: Alignment.topCenter),
+              builder: (_, v, child) => Opacity(opacity: v, child: Transform.translate(offset: Offset(24 * (1 - v), 0), child: child)),
+              child: AspectRatio(
+                aspectRatio: 0.82,
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.9), width: 3),
+                    boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.18), blurRadius: 16, offset: const Offset(0, 8))],
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(17),
+                    child: Image.asset('assets/people/business.jpg', fit: BoxFit.cover, alignment: Alignment.topCenter),
+                  ),
+                ),
               ),
             ),
           ),

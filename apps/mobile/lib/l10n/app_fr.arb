@@ -660,12 +660,14 @@
   "loginWithCode": "Recevoir plutôt un code par e-mail",
   "signupSubtitle": "Créez votre compte en 1 minute.",
   "forgotTitle": "Mot de passe oublié",
-  "forgotText": "Entrez votre e-mail : nous vous envoyons un code à 6 chiffres pour choisir un nouveau mot de passe.",
+  "forgotText": "Entrez l'e-mail de votre compte : nous vous envoyons un code à 6 chiffres pour choisir un nouveau mot de passe. Pensez à regarder dans les spams.",
   "sendCode": "Envoyer le code",
   "newPasswordTitle": "Nouveau mot de passe",
   "newPasswordText": "Choisissez un mot de passe d’au moins 8 caractères. Vous l’utiliserez pour vous connecter.",
   "passwordSaved": "Mot de passe enregistré ✅",
   "changePassword": "Mot de passe",
   "changePasswordHint": "Créer ou modifier mon mot de passe",
-  "myData": "Mes données"
+  "myData": "Mes données",
+  "noAccountForEmail": "Aucun compte n'existe avec cet e-mail. Créez un compte depuis l'écran de connexion.",
+  "codeInvalidOrExpired": "Code incorrect ou expiré. Demandez un nouveau code."
 }

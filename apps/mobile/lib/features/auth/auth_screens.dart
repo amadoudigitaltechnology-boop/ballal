@@ -119,7 +119,8 @@ class _LoginScreenState extends State<LoginScreen> {
       await supa.auth.signInWithOAuth(
         OAuthProvider.google,
         redirectTo: 'com.amadoutechnology.ballal://login-callback',
-        authScreenLaunchMode: LaunchMode.externalApplication,
+        // Onglet de navigateur intégré : évite que l'application Gmail intercepte la page Google.
+        authScreenLaunchMode: LaunchMode.inAppBrowserView,
       );
     } catch (e) {
       if (!mounted) return;
@@ -405,7 +406,15 @@ class _OtpScreenState extends State<OtpScreen> {
       // Sinon la redirection (profil à compléter ou accueil) est gérée par le routeur.
     } catch (e) {
       _code.clear();
-      if (mounted) showError(context, e);
+      if (!mounted) return;
+      final m = e.toString().toLowerCase();
+      if (m.contains('user not found')) {
+        showInfo(context, context.l10n.noAccountForEmail);
+      } else if (m.contains('expired') || m.contains('invalid')) {
+        showInfo(context, context.l10n.codeInvalidOrExpired);
+      } else {
+        showError(context, e);
+      }
     } finally {
       if (mounted) setState(() => _loading = false);
     }
