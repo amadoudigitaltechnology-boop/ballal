@@ -64,6 +64,74 @@ class CatalogRepo {
   }
 }
 
+// ═════════════ Réglages publics et annonces ═════════════
+class AppSettingsRepo {
+  AppSettingsRepo._();
+  static final instance = AppSettingsRepo._();
+
+  Future<Map<String, dynamic>> publicSettings() async {
+    final rows = await supa.from('app_settings').select('key, value');
+    return {for (final r in (rows as List)) (r as Map)['key'] as String: r['value']};
+  }
+}
+
+class Ad {
+  Ad({required this.id, required this.title, this.body, this.imagePath, this.linkUrl, this.cta});
+  final String id;
+  final String title;
+  final String? body;
+  final String? imagePath;
+  final String? linkUrl;
+  final String? cta;
+
+  factory Ad.fromMap(Map<String, dynamic> m) => Ad(
+        id: m['id'] as String,
+        title: m['title'] as String,
+        body: m['body'] as String?,
+        imagePath: m['image_path'] as String?,
+        linkUrl: m['link_url'] as String?,
+        cta: m['cta'] as String?,
+      );
+}
+
+class AdsRepo {
+  AdsRepo._();
+  static final instance = AdsRepo._();
+  List<Ad>? _cache;
+  DateTime? _at;
+  final Set<String> _seen = {};
+
+  /// Annonces actives (cache de 10 minutes). Jamais bloquant : en cas d'erreur, aucune annonce.
+  Future<List<Ad>> active() async {
+    if (_cache != null && _at != null && DateTime.now().difference(_at!).inMinutes < 10) return _cache!;
+    try {
+      final rows = await supa
+          .from('ads')
+          .select('id, title, body, image_path, link_url, cta')
+          .order('created_at', ascending: false)
+          .limit(10);
+      _cache = (rows as List).map((e) => Ad.fromMap(Map<String, dynamic>.from(e as Map))).toList();
+      _at = DateTime.now();
+    } catch (_) {
+      _cache ??= [];
+    }
+    return _cache!;
+  }
+
+  void impression(String id) {
+    if (!_seen.add(id)) return;
+    _track(id, false);
+  }
+
+  void click(String id) => _track(id, true);
+
+  Future<void> _track(String id, bool click) async {
+    try {
+      await supa.rpc('track_ad', params: {'p_ad': id, 'p_click': click});
+    } catch (_) {}
+  }
+}
+
 // ═════════════ Professionnels ═════════════
 class ProRepo {
   ProRepo._();
@@ -301,12 +369,20 @@ class ProRepo {
   }
 
   /// Envoie une pièce (photo) dans l'espace privé, puis crée le dossier « en attente ».
-  Future<void> submitVerification(String docType, Uint8List bytes) async {
+  Future<void> submitVerification(String docType, Uint8List bytes,
+      {String? paymentReference, String? paymentMethod, int? amountGnf}) async {
     final uid = currentUserId!;
     final path = '$uid/${_uuid.v4()}.jpg';
     await supa.storage.from('verification-docs').uploadBinary(path, bytes, fileOptions: const FileOptions(contentType: 'image/jpeg'));
     try {
-      await supa.from('verification_documents').insert({'user_id': uid, 'doc_type': docType, 'storage_path': path});
+      await supa.from('verification_documents').insert({
+        'user_id': uid,
+        'doc_type': docType,
+        'storage_path': path,
+        'payment_reference': paymentReference,
+        'payment_method': paymentMethod,
+        'amount_gnf': amountGnf,
+      });
     } catch (e) {
       try {
         await supa.storage.from('verification-docs').remove([path]);

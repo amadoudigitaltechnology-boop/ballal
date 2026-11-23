@@ -104,3 +104,30 @@ val ballalSigning = Properties().apply {
         g = g.replace('signingConfig = signingConfigs.getByName("debug")', 'signingConfig = signingConfigs.getByName("release")')
         gradle.write_text(g, encoding="utf-8")
         print("Android : signature officielle configurée")
+
+# ─── Firebase (notifications push) ───
+gs = ROOT / "tool/firebase/google-services.json"
+app_dir = ROOT / "android/app"
+settings_gradle = ROOT / "android/settings.gradle.kts"
+app_gradle = ROOT / "android/app/build.gradle.kts"
+if gs.exists() and app_dir.exists():
+    shutil.copyfile(gs, app_dir / "google-services.json")
+    if settings_gradle.exists():
+        sg = settings_gradle.read_text(encoding="utf-8")
+        if "com.google.gms.google-services" not in sg:
+            sg = sg.replace('id("com.android.application")',
+                            'id("com.google.gms.google-services") version "4.4.2" apply false\n    id("com.android.application")', 1)
+            settings_gradle.write_text(sg, encoding="utf-8")
+    if app_gradle.exists():
+        ag = app_gradle.read_text(encoding="utf-8")
+        if "com.google.gms.google-services" not in ag:
+            ag = ag.replace('id("com.android.application")', 'id("com.android.application")\n    id("com.google.gms.google-services")', 1)
+            app_gradle.write_text(ag, encoding="utf-8")
+    m = manifest.read_text(encoding="utf-8")
+    if "POST_NOTIFICATIONS" not in m:
+        m = m.replace("<application", '    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>\n    <application', 1)
+    if "default_notification_color" not in m:
+        m = m.replace("</application>", '''        <meta-data android:name="com.google.firebase.messaging.default_notification_channel_id" android:value="activity"/>
+    </application>''', 1)
+    manifest.write_text(m, encoding="utf-8")
+    print("Android : Firebase configuré")

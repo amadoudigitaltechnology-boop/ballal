@@ -71,6 +71,7 @@ class _ClientHomeState extends State<ClientHome> {
   late Future<List<ProCard>> _reco;
   Future<List<ServiceRequest>>? _recent;
   final List<ProCard> _feed = [];
+  List<Ad> _ads = const [];
   bool _feedLoading = false;
   bool _feedHasMore = true;
   Object? _feedError;
@@ -82,6 +83,9 @@ class _ClientHomeState extends State<ClientHome> {
     _reco = Future.value(const []);
     _restoreZone();
     _loadFeed(reset: true);
+    AdsRepo.instance.active().then((a) {
+      if (mounted) setState(() => _ads = a);
+    });
   }
 
   /// Tous les professionnels publiés, toutes zones confondues, par pages.
@@ -315,7 +319,11 @@ class _ClientHomeState extends State<ClientHome> {
                 padding: const EdgeInsets.all(24),
                 child: Text(l.noProYet, textAlign: TextAlign.center, style: const TextStyle(color: BallalColors.muted)),
               ),
-            for (var i = 0; i < _feed.length; i++) FadeSlideIn(index: i % 10, child: ProListTile(pro: _feed[i])),
+            for (var i = 0; i < _feed.length; i++) ...[
+              FadeSlideIn(index: i % 10, child: ProListTile(pro: _feed[i])),
+              // Publicité discrète : une annonce après chaque série de 10 professionnels.
+              if ((i + 1) % 10 == 0 && _ads.isNotEmpty) AdCard(ad: _ads[((i + 1) ~/ 10 - 1) % _ads.length]),
+            ],
             if (_feedHasMore && _feed.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.all(16),
@@ -383,13 +391,22 @@ class _Banner extends StatelessWidget {
           Positioned(
             right: 0,
             bottom: 0,
-            top: 8,
+            top: 0,
+            width: MediaQuery.of(context).size.width * 0.46,
             child: TweenAnimationBuilder<double>(
               tween: Tween(begin: 0, end: 1),
               duration: const Duration(milliseconds: 650),
               curve: Curves.easeOutCubic,
               builder: (_, v, child) => Opacity(opacity: v, child: Transform.translate(offset: Offset(30 * (1 - v), 0), child: child)),
-              child: Image.asset('assets/people/business.png', fit: BoxFit.contain, filterQuality: FilterQuality.medium),
+              // Photo entière, fondue dans le bleu de la bannière (pas de détourage).
+              child: ShaderMask(
+                blendMode: BlendMode.dstIn,
+                shaderCallback: (r) => const LinearGradient(
+                  colors: [Colors.transparent, Colors.black, Colors.black],
+                  stops: [0, 0.35, 1],
+                ).createShader(r),
+                child: Image.asset('assets/people/business.jpg', fit: BoxFit.cover, alignment: Alignment.topCenter),
+              ),
             ),
           ),
           Padding(

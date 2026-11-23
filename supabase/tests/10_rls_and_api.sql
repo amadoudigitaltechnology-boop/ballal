@@ -283,4 +283,34 @@ select pg_temp.check((select not is_featured from public.search_professionals('p
 reset role;
 delete from public.user_roles where user_id = '00000000-0000-0000-0000-00000000000b' and role = 'admin';
 
+-- ═══ Push, réglages, annonces ═══
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000000000a', false);
+set role authenticated;
+select public.register_device_token('jeton-appareil-test-0123456789abcdef', 'android');
+select pg_temp.check((select count(*) from public.device_tokens) = 1, 'jeton appareil enregistré');
+select pg_temp.check((select count(*) from public.app_settings where key = 'functions_url') = 0, 'réglage privé invisible');
+select pg_temp.check((select count(*) from public.app_settings where key = 'verification_fee_gnf') = 1, 'tarif de vérification lisible');
+select pg_temp.expect_error($q$select public.admin_set_setting('verification_fee_gnf', '50000')$q$, 'tarif modifié par un non-admin');
+select pg_temp.expect_error($q$insert into public.ads (title) values ('Pub pirate')$q$, 'annonce créée par un non-admin');
+reset role;
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000000000b', false);
+set role authenticated;
+select public.register_device_token('jeton-appareil-test-0123456789abcdef', 'android');
+reset role;
+select pg_temp.check((select user_id = '00000000-0000-0000-0000-00000000000b' from public.device_tokens
+                       where token = 'jeton-appareil-test-0123456789abcdef'), 'appareil réattribué au dernier compte connecté');
+insert into public.user_roles (user_id, role) values ('00000000-0000-0000-0000-00000000000b', 'admin') on conflict do nothing;
+set role authenticated;
+select public.admin_set_setting('verification_fee_gnf', '50000');
+insert into public.ads (title, link_url) values ('Annonce test', 'https://amadoutechnology.com');
+reset role;
+delete from public.user_roles where user_id = '00000000-0000-0000-0000-00000000000b' and role = 'admin';
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000000000a', false);
+set role authenticated;
+select pg_temp.check((select (value #>> '{}')::int = 50000 from public.app_settings where key = 'verification_fee_gnf'), 'tarif fixé par l''admin');
+select pg_temp.check((select count(*) from public.ads) = 1, 'annonce visible des utilisateurs');
+select public.track_ad((select id from public.ads limit 1));
+reset role;
+select pg_temp.check((select impressions = 1 from public.ads), 'affichage d''annonce compté');
+
 \echo '══════ TOUS LES TESTS SONT PASSÉS ══════'

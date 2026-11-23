@@ -65,9 +65,9 @@ class _LoginScreenState extends State<LoginScreen> {
           height: (h * 0.42).clamp(280.0, 380.0),
           child: Stack(children: [
             Positioned(
-              left: 0,
-              bottom: 18,
-              top: MediaQuery.of(context).padding.top + 24,
+              left: 24,
+              bottom: 34,
+              top: MediaQuery.of(context).padding.top + 20,
               child: TweenAnimationBuilder<double>(
                 tween: Tween(begin: 0, end: 1),
                 duration: const Duration(milliseconds: 700),
@@ -76,12 +76,25 @@ class _LoginScreenState extends State<LoginScreen> {
                   opacity: v,
                   child: Transform.translate(offset: Offset(-30 * (1 - v), 0), child: child),
                 ),
-                child: Image.asset('assets/people/woman_phone.png', fit: BoxFit.contain, filterQuality: FilterQuality.medium),
+                child: AspectRatio(
+                  aspectRatio: 0.92,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(28),
+                      border: Border.all(color: Colors.white, width: 4),
+                      boxShadow: [BoxShadow(color: BallalColors.primary.withValues(alpha: 0.25), blurRadius: 24, offset: const Offset(0, 12))],
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(24),
+                      child: Image.asset('assets/people/woman_phone.jpg', fit: BoxFit.cover, alignment: Alignment.topCenter),
+                    ),
+                  ),
+                ),
               ),
             ),
             Positioned(
               right: 16,
-              top: MediaQuery.of(context).padding.top + 70,
+              top: MediaQuery.of(context).padding.top + 28,
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14)),

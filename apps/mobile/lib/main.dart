@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart' hide Session;
 
 import 'app.dart';
 import 'core/config.dart';
+import 'core/push.dart';
 import 'core/session.dart';
 
 Future<void> main() async {
@@ -17,6 +18,7 @@ Future<void> main() async {
 
   await Supabase.initialize(url: AppConfig.supabaseUrl, anonKey: AppConfig.supabaseAnonKey);
   await Session.instance.init();
+  await PushService.instance.init();
   runApp(const BallalApp());
 }
 

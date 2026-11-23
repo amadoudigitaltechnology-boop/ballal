@@ -601,5 +601,28 @@
         "type": "String"
       }
     }
+  },
+  "adLabel": "SPONSORISÉ",
+  "adOpen": "Voir",
+  "verificationFee": "Frais de vérification : {amount}",
+  "verificationFeeHow": "Payez par Orange Money au {number}, puis saisissez la référence de la transaction (reçue par SMS). Le badge n'est accordé que si vos documents sont valides.",
+  "verificationFeeUnknown": "La vérification est payante. Contactez-nous sur WhatsApp pour connaître le tarif avant d'envoyer vos documents.",
+  "paymentReference": "Référence de la transaction",
+  "paymentReferenceHint": "Ex. : MP231123.1530.A12345",
+  "paymentReferenceRequired": "Saisissez la référence de votre paiement avant d'envoyer.",
+  "contactUs": "Nous contacter",
+  "@verificationFee": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "@verificationFeeHow": {
+    "placeholders": {
+      "number": {
+        "type": "String"
+      }
+    }
   }
 }

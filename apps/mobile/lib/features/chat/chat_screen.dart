@@ -350,7 +350,7 @@ class _ChatScreenState extends State<ChatScreen> {
               : ListView.builder(
                   controller: _scroll,
                   reverse: true,
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  padding: const EdgeInsets.fromLTRB(10, 6, 10, 10),
                   itemCount: messages.length + (_loadingOlder ? 1 : 0),
                   itemBuilder: (_, i) {
                     if (i >= messages.length) {
@@ -359,10 +359,15 @@ class _ChatScreenState extends State<ChatScreen> {
                     final m = messages[i];
                     final mine = m.senderId == currentUserId;
                     final read = mine && _otherLastRead != null && !_otherLastRead!.isBefore(m.createdAt);
+                    // Liste inversée : l'élément i-1 est le message suivant (plus récent).
+                    final next = i > 0 ? messages[i - 1] : null;
+                    final grouped = next != null && next.senderId == m.senderId &&
+                        next.createdAt.difference(m.createdAt).inMinutes.abs() < 3;
                     return _Bubble(
                       message: m,
                       mine: mine,
                       read: read,
+                      grouped: grouped,
                       onRetry: m.sendState == SendState.failed
                           ? () => _sendPending(m, bytes: m.localBytes == null ? null : Uint8List.fromList(m.localBytes!),
                               ext: m.type == 'image' ? 'jpg' : 'm4a')
@@ -391,8 +396,11 @@ class _ChatScreenState extends State<ChatScreen> {
     return SafeArea(
       top: false,
       child: Container(
-        padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
-        color: Colors.white,
+        padding: const EdgeInsets.fromLTRB(6, 6, 8, 6),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, -2))],
+        ),
         child: _recording
             ? Row(children: [
                 IconButton(
@@ -450,28 +458,38 @@ class _ChatScreenState extends State<ChatScreen> {
                     maxLength: 4000,
                     textCapitalization: TextCapitalization.sentences,
                     onChanged: (_) => setState(() {}),
+                    style: const TextStyle(fontSize: 15),
                     decoration: InputDecoration(
                       hintText: context.l10n.writeMessage,
                       counterText: '',
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: BorderSide.none),
-                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: BorderSide.none),
-                      fillColor: BallalColors.bg,
+                      isDense: true,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(22), borderSide: BorderSide.none),
+                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(22), borderSide: BorderSide.none),
+                      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(22), borderSide: BorderSide.none),
+                      fillColor: BallalColors.field,
                     ),
                   ),
                 ),
-                const SizedBox(width: 4),
-                _input.text.trim().isEmpty
-                    ? IconButton.filled(
-                        tooltip: context.l10n.voiceMessage,
-                        onPressed: _startRecording,
-                        icon: const Icon(Icons.mic_rounded),
-                      )
-                    : IconButton.filled(
-                        tooltip: context.l10n.send,
-                        onPressed: _sendText,
-                        icon: const Icon(Icons.send_rounded),
-                      ),
+                const SizedBox(width: 6),
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 200),
+                  transitionBuilder: (c, a) => ScaleTransition(scale: a, child: RotationTransition(turns: Tween(begin: 0.85, end: 1.0).animate(a), child: c)),
+                  child: _input.text.trim().isEmpty
+                      ? IconButton.filled(
+                          key: const ValueKey('mic'),
+                          tooltip: context.l10n.voiceMessage,
+                          onPressed: _startRecording,
+                          icon: const Icon(Icons.mic_rounded),
+                        )
+                      : IconButton.filled(
+                          key: const ValueKey('send'),
+                          tooltip: context.l10n.send,
+                          style: IconButton.styleFrom(backgroundColor: BallalColors.accent),
+                          onPressed: _sendText,
+                          icon: const Icon(Icons.send_rounded, size: 20),
+                        ),
+                ),
               ]),
       ),
     );
@@ -481,71 +499,102 @@ class _ChatScreenState extends State<ChatScreen> {
 String _fmtDuration(Duration d) =>
     '${d.inMinutes.toString().padLeft(1, '0')}:${(d.inSeconds % 60).toString().padLeft(2, '0')}';
 
+/// Bulle compacte et simple ; les nouveaux messages arrivent avec une petite animation.
 class _Bubble extends StatelessWidget {
-  const _Bubble({required this.message, required this.mine, required this.read, this.onRetry});
+  const _Bubble({required this.message, required this.mine, required this.read, this.onRetry, this.grouped = false});
   final ChatMessage message;
   final bool mine;
   final bool read;
+  final bool grouped;
   final VoidCallback? onRetry;
 
   @override
   Widget build(BuildContext context) {
     final l = context.l10n;
-    final bg = mine ? BallalColors.primary : Colors.white;
-    final fg = mine ? Colors.white : BallalColors.text;
-    Widget content;
-    switch (message.type) {
-      case 'image':
-        content = _ImageContent(message: message);
-      case 'audio':
-        content = VoiceMessagePlayer(message: message, color: fg);
-      default:
-        content = Text(message.body ?? '', style: TextStyle(color: fg, fontSize: 15, height: 1.3));
-    }
+    final failed = message.sendState == SendState.failed;
+    final bg = failed ? BallalColors.danger : (mine ? BallalColors.primary : Colors.white);
+    final fg = mine || failed ? Colors.white : BallalColors.text;
+    final isImage = message.type == 'image';
+    Widget content = switch (message.type) {
+      'image' => _ImageContent(message: message),
+      'audio' => VoiceMessagePlayer(message: message, color: fg),
+      _ => Text(message.body ?? '', style: TextStyle(color: fg, fontSize: 14.5, height: 1.3)),
+    };
     Widget status = const SizedBox.shrink();
     if (mine) {
       status = switch (message.sendState) {
-        SendState.sending => Icon(Icons.schedule, size: 13, color: fg.withValues(alpha: 0.8), semanticLabel: l.sending),
-        SendState.failed => const Icon(Icons.error_outline, size: 14, color: BallalColors.accentSoft),
+        SendState.sending => Icon(Icons.schedule, size: 11, color: fg.withValues(alpha: 0.75), semanticLabel: l.sending),
+        SendState.failed => const Icon(Icons.error_outline, size: 12, color: Colors.white),
         SendState.sent => Icon(read ? Icons.done_all_rounded : Icons.done_rounded,
-            size: 15, color: read ? BallalColors.accentSoft : fg.withValues(alpha: 0.8),
+            size: 13, color: read ? const Color(0xFFFFC58F) : fg.withValues(alpha: 0.75),
             semanticLabel: read ? l.read : l.sent),
       };
     }
+    final meta = Row(mainAxisSize: MainAxisSize.min, children: [
+      if (failed) Text('${l.tapToRetry} · ', style: const TextStyle(color: Colors.white, fontSize: 10)),
+      Text(formatChatTime(message.createdAt), style: TextStyle(fontSize: 10, color: fg.withValues(alpha: 0.65))),
+      if (mine) ...[const SizedBox(width: 3), status],
+    ]);
+    const r = Radius.circular(16);
+    const tight = Radius.circular(5);
+    final bubble = GestureDetector(
+      onTap: onRetry,
+      child: Container(
+        margin: EdgeInsets.only(top: grouped ? 1.5 : 6),
+        constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.72),
+        padding: isImage ? const EdgeInsets.all(3) : const EdgeInsets.fromLTRB(12, 7, 10, 6),
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: BorderRadius.only(
+            topLeft: r,
+            topRight: r,
+            bottomLeft: mine || grouped ? r : tight,
+            bottomRight: !mine || grouped ? r : tight,
+          ),
+          boxShadow: mine ? null : [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 4, offset: const Offset(0, 1))],
+        ),
+        child: isImage
+            ? Stack(children: [
+                content,
+                Positioned(
+                  right: 6,
+                  bottom: 6,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(color: Colors.black45, borderRadius: BorderRadius.circular(10)),
+                    child: DefaultTextStyle.merge(style: const TextStyle(color: Colors.white), child: meta),
+                  ),
+                ),
+              ])
+            : Wrap(
+                alignment: WrapAlignment.end,
+                crossAxisAlignment: WrapCrossAlignment.end,
+                spacing: 8,
+                children: [content, Padding(padding: const EdgeInsets.only(top: 3), child: meta)],
+              ),
+      ),
+    );
+    final fresh = message.sendState == SendState.sending ||
+        DateTime.now().difference(message.createdAt).inSeconds.abs() < 8;
     return Align(
       alignment: mine ? Alignment.centerRight : Alignment.centerLeft,
-      child: GestureDetector(
-        onTap: onRetry,
-        child: Container(
-          margin: const EdgeInsets.symmetric(vertical: 3),
-          constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.78),
-          padding: EdgeInsets.all(message.type == 'image' ? 4 : 10),
-          decoration: BoxDecoration(
-            color: message.sendState == SendState.failed ? BallalColors.danger : bg,
-            borderRadius: BorderRadius.only(
-              topLeft: const Radius.circular(18),
-              topRight: const Radius.circular(18),
-              bottomLeft: Radius.circular(mine ? 18 : 4),
-              bottomRight: Radius.circular(mine ? 4 : 18),
+      child: !fresh
+          ? bubble
+          : TweenAnimationBuilder<double>(
+              key: ValueKey('anim-${message.id}'),
+              tween: Tween(begin: 0, end: 1),
+              duration: const Duration(milliseconds: 260),
+              curve: Curves.easeOutBack,
+              builder: (_, v, child) => Opacity(
+                opacity: v.clamp(0, 1),
+                child: Transform.scale(
+                  scale: 0.85 + 0.15 * v,
+                  alignment: mine ? Alignment.bottomRight : Alignment.bottomLeft,
+                  child: child,
+                ),
+              ),
+              child: bubble,
             ),
-            boxShadow: mine ? null : [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 6)],
-          ),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.end, mainAxisSize: MainAxisSize.min, children: [
-            content,
-            const SizedBox(height: 3),
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: message.type == 'image' ? 6 : 0),
-              child: Row(mainAxisSize: MainAxisSize.min, children: [
-                if (message.sendState == SendState.failed)
-                  Text(l.tapToRetry, style: const TextStyle(color: Colors.white, fontSize: 11)),
-                Text(formatChatTime(message.createdAt), style: TextStyle(fontSize: 11, color: fg.withValues(alpha: 0.7))),
-                const SizedBox(width: 3),
-                status,
-              ]),
-            ),
-          ]),
-        ),
-      ),
     );
   }
 }
@@ -560,16 +609,16 @@ class _ImageContent extends StatelessWidget {
     if (message.localBytes != null) {
       return ClipRRect(
         borderRadius: r,
-        child: Image.memory(Uint8List.fromList(message.localBytes!), width: 220, height: 220, fit: BoxFit.cover),
+        child: Image.memory(Uint8List.fromList(message.localBytes!), width: 180, height: 180, fit: BoxFit.cover),
       );
     }
     final path = message.attachmentPath;
-    if (path == null) return const SizedBox(width: 220, height: 220);
+    if (path == null) return const SizedBox(width: 180, height: 180);
     return FutureBuilder<String>(
       future: ChatRepo.instance.signedUrl(path),
       builder: (context, snap) {
         if (!snap.hasData) {
-          return const SizedBox(width: 220, height: 220, child: Center(child: CircularProgressIndicator()));
+          return const SizedBox(width: 180, height: 180, child: Center(child: CircularProgressIndicator()));
         }
         return GestureDetector(
           onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(
@@ -584,8 +633,8 @@ class _ImageContent extends StatelessWidget {
             child: CachedNetworkImage(
               imageUrl: snap.data!,
               cacheKey: path, // l'URL signée change, le fichier non
-              width: 220,
-              height: 220,
+              width: 180,
+              height: 180,
               fit: BoxFit.cover,
               memCacheWidth: 600,
             ),

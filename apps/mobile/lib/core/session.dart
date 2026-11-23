@@ -97,7 +97,13 @@ class Session extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Appelé juste avant la déconnexion (ex. retirer le jeton push de l'appareil).
+  Future<void> Function()? beforeSignOut;
+
   Future<void> signOut() async {
+    try {
+      await beforeSignOut?.call();
+    } catch (_) {}
     await supa.auth.signOut();
     await refresh();
   }

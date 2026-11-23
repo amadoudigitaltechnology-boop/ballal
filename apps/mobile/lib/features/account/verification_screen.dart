@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../core/formatters.dart';
 import '../../core/supa.dart';
 import '../../core/theme.dart';
 import '../../data/repositories.dart';
@@ -18,11 +19,44 @@ class VerificationScreen extends StatefulWidget {
 class _VerificationScreenState extends State<VerificationScreen> {
   late Future<List<Map<String, dynamic>>> _future = ProRepo.instance.myVerifications();
   String? _sending;
+  int? _fee;
+  String? _omNumber;
+  final _reference = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    AppSettingsRepo.instance.publicSettings().then((m) {
+      if (!mounted) return;
+      final fee = m['verification_fee_gnf'];
+      final numbers = m['payment_numbers'];
+      setState(() {
+        _fee = fee is num ? fee.toInt() : null;
+        _omNumber = numbers is Map ? numbers['orange_money'] as String? : null;
+      });
+    }).catchError((_) {});
+  }
+
+  @override
+  void dispose() {
+    _reference.dispose();
+    super.dispose();
+  }
 
   void _reload() => setState(() => _future = ProRepo.instance.myVerifications());
 
+  Future<void> _whatsapp() async {
+    final text = Uri.encodeComponent('Bonjour, je souhaite faire vérifier mon profil BALLAL. Quel est le tarif ?');
+    await launchUrl(Uri.parse('https://wa.me/224620657693?text=$text'), mode: LaunchMode.externalApplication);
+  }
+
   Future<void> _send(String type) async {
     final l = context.l10n;
+    // Vérification payante : la référence du paiement est demandée avant l'envoi.
+    if (_fee != null && _fee! > 0 && _reference.text.trim().length < 4) {
+      showInfo(context, l.paymentReferenceRequired);
+      return;
+    }
     final source = await showModalBottomSheet<ImageSource>(
       context: context,
       builder: (ctx) => SafeArea(
@@ -45,7 +79,13 @@ class _VerificationScreenState extends State<VerificationScreen> {
     if (file == null) return;
     setState(() => _sending = type);
     try {
-      await ProRepo.instance.submitVerification(type, await file.readAsBytes());
+      await ProRepo.instance.submitVerification(
+        type,
+        await file.readAsBytes(),
+        paymentReference: _reference.text.trim().isEmpty ? null : _reference.text.trim(),
+        paymentMethod: _reference.text.trim().isEmpty ? null : 'orange_money',
+        amountGnf: _fee,
+      );
       if (mounted) showInfo(context, l.verificationSent);
       _reload();
     } catch (e) {
@@ -85,6 +125,45 @@ class _VerificationScreenState extends State<VerificationScreen> {
               ),
             ),
             const SizedBox(height: 16),
+            if (docs.every((d) => d['status'] != 'approved'))
+              FadeSlideIn(
+                child: BallalCard(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Row(children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(color: BallalColors.accentSoft, borderRadius: BorderRadius.circular(12)),
+                        child: const Icon(Icons.payments_outlined, color: BallalColors.accent),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          _fee == null ? l.contactUs : l.verificationFee(formatGnf(_fee!)),
+                          style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+                        ),
+                      ),
+                    ]),
+                    const SizedBox(height: 10),
+                    if (_fee == null) ...[
+                      Text(l.verificationFeeUnknown, style: const TextStyle(color: BallalColors.muted)),
+                      const SizedBox(height: 10),
+                      OutlinedButton.icon(onPressed: _whatsapp, icon: const Icon(Icons.chat_rounded, size: 18), label: Text(l.activateViaWhatsapp)),
+                    ] else ...[
+                      Text(l.verificationFeeHow(_omNumber ?? '620 65 76 93'), style: const TextStyle(color: BallalColors.muted)),
+                      const SizedBox(height: 12),
+                      FieldLabel(l.paymentReference),
+                      TextField(
+                        controller: _reference,
+                        maxLength: 80,
+                        buildCounter: noCounter,
+                        textCapitalization: TextCapitalization.characters,
+                        decoration: InputDecoration(hintText: l.paymentReferenceHint, prefixIcon: const Icon(Icons.receipt_long_outlined)),
+                      ),
+                    ],
+                  ]),
+                ),
+              ),
             _DocCard(
               icon: Icons.badge_outlined,
               title: l.docIdentity,

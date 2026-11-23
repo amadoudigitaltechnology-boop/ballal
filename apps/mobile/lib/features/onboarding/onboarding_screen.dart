@@ -213,56 +213,63 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 }
 
-/// Personnages détourés posés sur un disque dégradé bleu/orange.
+/// Photos entières dans des cadres arrondis (pas de détourage : rendu naturel).
 class _PeopleStage extends StatelessWidget {
   const _PeopleStage({required this.people});
   final List<String> people;
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(builder: (context, c) {
-      final h = c.maxHeight;
-      return Stack(alignment: Alignment.bottomCenter, children: [
-        Positioned(
-          bottom: 0,
+    Widget photo(String name, int i) => TweenAnimationBuilder<double>(
+          tween: Tween(begin: 0, end: 1),
+          duration: Duration(milliseconds: 450 + i * 120),
+          curve: Curves.easeOutCubic,
+          builder: (_, v, child) => Opacity(opacity: v, child: Transform.scale(scale: 0.92 + 0.08 * v, child: child)),
           child: Container(
-            width: c.maxWidth * 0.95,
-            height: h * 0.78,
-            decoration: const BoxDecoration(
-              borderRadius: BorderRadius.vertical(top: Radius.circular(400)),
-              gradient: LinearGradient(
-                colors: [BallalColors.primarySoft, Color(0xFFFFE7D3)],
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-              ),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: [BoxShadow(color: BallalColors.primary.withValues(alpha: 0.18), blurRadius: 22, offset: const Offset(0, 10))],
             ),
-          ),
-        ),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            for (var i = 0; i < people.length; i++)
-              Flexible(
-                child: TweenAnimationBuilder<double>(
-                  tween: Tween(begin: 0, end: 1),
-                  duration: Duration(milliseconds: 500 + i * 120),
-                  curve: Curves.easeOutCubic,
-                  builder: (_, v, child) => Opacity(
-                    opacity: v,
-                    child: Transform.translate(offset: Offset(0, 40 * (1 - v)), child: child),
-                  ),
-                  child: Image.asset(
-                    'assets/people/${people[i]}.png',
-                    height: people.length == 1 ? h * 0.95 : (people.length == 2 ? h * 0.85 : h * 0.62),
-                    fit: BoxFit.contain,
-                    filterQuality: FilterQuality.medium,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(24),
+              child: Stack(fit: StackFit.expand, children: [
+                Image.asset('assets/people/$name.jpg', fit: BoxFit.cover, alignment: Alignment.topCenter),
+                const DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [Colors.transparent, Color(0x330B2A6F)],
+                    ),
                   ),
                 ),
-              ),
-          ],
-        ),
-      ]);
-    });
+              ]),
+            ),
+          ),
+        );
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
+      child: switch (people.length) {
+        1 => photo(people[0], 0),
+        2 => Row(children: [
+            Expanded(child: photo(people[0], 0)),
+            const SizedBox(width: 12),
+            Expanded(child: Padding(padding: const EdgeInsets.only(top: 36), child: photo(people[1], 1))),
+          ]),
+        _ => Column(children: [
+            Expanded(child: Row(children: [
+              Expanded(child: photo(people[0], 0)),
+              const SizedBox(width: 12),
+              Expanded(child: photo(people[1], 1)),
+            ])),
+            const SizedBox(height: 12),
+            Expanded(child: Row(children: [
+              Expanded(child: photo(people[2], 2)),
+              const SizedBox(width: 12),
+              Expanded(child: photo(people[3], 3)),
+            ])),
+          ]),
+      },
+    );
   }
 }

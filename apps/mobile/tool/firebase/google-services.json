@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "257916920770",
+    "project_id": "ballal-e3516",
+    "storage_bucket": "ballal-e3516.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:257916920770:android:290e6126b2737f3d2fec5b",
+        "android_client_info": {
+          "package_name": "com.amadoutechnology.ballal"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDdJqGYlFxHteXyoIOlyfrEyVkkeqnNCKk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

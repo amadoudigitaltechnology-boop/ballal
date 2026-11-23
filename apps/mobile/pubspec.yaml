@@ -25,6 +25,8 @@ dependencies:
   shared_preferences: ^2.3.3
   uuid: ^4.5.1
   flutter_map: ^8.1.1
+  firebase_core: ^3.13.0
+  firebase_messaging: ^15.2.5
   latlong2: ^0.9.1
 
 dev_dependencies:

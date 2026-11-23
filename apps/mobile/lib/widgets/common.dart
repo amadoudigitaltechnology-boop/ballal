@@ -1,6 +1,7 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../core/formatters.dart';
 import '../core/session.dart';
@@ -611,6 +612,68 @@ class _PlacePickerState extends State<_PlacePicker> {
             },
           ),
         ),
+      ]),
+    );
+  }
+}
+
+/// Annonce sponsorisée discrète, toujours marquée « Sponsorisé ».
+class AdCard extends StatefulWidget {
+  const AdCard({super.key, required this.ad});
+  final Ad ad;
+
+  @override
+  State<AdCard> createState() => _AdCardState();
+}
+
+class _AdCardState extends State<AdCard> {
+  @override
+  void initState() {
+    super.initState();
+    AdsRepo.instance.impression(widget.ad.id);
+  }
+
+  Future<void> _open() async {
+    final url = widget.ad.linkUrl;
+    if (url == null) return;
+    AdsRepo.instance.click(widget.ad.id);
+    await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final ad = widget.ad;
+    final l = context.l10n;
+    return BallalCard(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      padding: const EdgeInsets.all(10),
+      onTap: ad.linkUrl == null ? null : _open,
+      child: Row(children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: ad.imagePath == null
+              ? Container(
+                  width: 64,
+                  height: 64,
+                  color: BallalColors.accentSoft,
+                  child: const Icon(Icons.campaign_outlined, color: BallalColors.accent),
+                )
+              : CachedNetworkImage(imageUrl: publicUrl('ads', ad.imagePath!), width: 64, height: 64, fit: BoxFit.cover),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(l.adLabel,
+                style: const TextStyle(fontSize: 10.5, color: BallalColors.muted, fontWeight: FontWeight.w700, letterSpacing: 0.4)),
+            Text(ad.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w800)),
+            if (ad.body != null)
+              Text(ad.body!, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, color: BallalColors.muted)),
+          ]),
+        ),
+        if (ad.linkUrl != null) ...[
+          const SizedBox(width: 8),
+          Text(ad.cta ?? l.adOpen, style: const TextStyle(color: BallalColors.primary, fontWeight: FontWeight.w800, fontSize: 13)),
+        ],
       ]),
     );
   }

@@ -78,6 +78,8 @@ tr:hover td{background:#FAFCFF}
       <button data-tab="verif">Vérifications <span class="count hidden" id="c-verif"></span></button>
       <button data-tab="reports">Signalements <span class="count hidden" id="c-reports"></span></button>
       <button data-tab="users">Utilisateurs</button>
+      <button data-tab="ads">Publicités</button>
+      <button data-tab="settings">Réglages</button>
     </nav>
     <button class="btn sm ghost" id="logout">Déconnexion</button>
   </header>
@@ -85,6 +87,32 @@ tr:hover td{background:#FAFCFF}
     <div id="tab-dash"></div>
     <div id="tab-verif" class="hidden"></div>
     <div id="tab-reports" class="hidden"></div>
+    <div id="tab-ads" class="hidden">
+      <div class="card">
+        <b>Nouvelle annonce</b> <span class="muted">— affichée discrètement (« Sponsorisé ») après chaque série de 10 professionnels</span>
+        <div class="grid" style="margin-top:12px;grid-template-columns:repeat(auto-fill,minmax(230px,1fr))">
+          <input id="ad-title" placeholder="Titre (obligatoire)" maxlength="80">
+          <input id="ad-body" placeholder="Texte court" maxlength="160">
+          <input id="ad-link" placeholder="Lien https://… (facultatif)">
+          <input id="ad-cta" placeholder="Bouton (ex. : Découvrir)" maxlength="24">
+          <input id="ad-end" type="date" title="Date de fin (facultatif)">
+          <input id="ad-img" type="file" accept="image/png,image/jpeg,image/webp">
+        </div>
+        <div style="height:12px"></div>
+        <button class="btn or" id="ad-create">Publier l'annonce</button>
+      </div>
+      <div id="ads"></div>
+    </div>
+    <div id="tab-settings" class="hidden">
+      <div class="card">
+        <b>Vérification payante</b>
+        <p class="muted">Montant demandé aux professionnels pour vérifier leur profil. Laissez vide pour « tarif sur WhatsApp ».</p>
+        <div class="row"><input id="fee" type="number" min="0" step="1000" placeholder="Montant en GNF" style="max-width:240px">
+        <input id="om" placeholder="Numéro Orange Money" style="max-width:240px">
+        <input id="mtn" placeholder="Numéro MTN MoMo (facultatif)" style="max-width:240px">
+        <button class="btn" id="save-settings">Enregistrer</button></div>
+      </div>
+    </div>
     <div id="tab-users" class="hidden">
       <div class="row" style="margin-bottom:14px"><input id="q" placeholder="Rechercher un nom, un e-mail, une entreprise…" style="flex:1"><button class="btn" id="search">Rechercher</button></div>
       <div id="users"></div>
@@ -143,8 +171,8 @@ async function start() {
 // ───── Onglets ─────
 document.querySelectorAll('#tabs button').forEach((b) => b.onclick = () => {
   document.querySelectorAll('#tabs button').forEach((x) => x.classList.toggle('on', x === b));
-  ['dash', 'verif', 'reports', 'users'].forEach((t) => $('tab-' + t).classList.toggle('hidden', t !== b.dataset.tab));
-  ({ dash: loadDash, verif: loadVerif, reports: loadReports, users: loadUsers })[b.dataset.tab]();
+  ['dash', 'verif', 'reports', 'users', 'ads', 'settings'].forEach((t) => $('tab-' + t).classList.toggle('hidden', t !== b.dataset.tab));
+  ({ dash: loadDash, verif: loadVerif, reports: loadReports, users: loadUsers, ads: loadAds, settings: loadSettings })[b.dataset.tab]();
 });
 
 async function loadDash() {
@@ -155,7 +183,8 @@ async function loadDash() {
     ['Utilisateurs', s.users], ['Nouveaux (7 j)', s.users_7d], ['Professionnels', s.pros], ['Pros publiés', s.pros_published],
     ['Pros vérifiés', s.pros_verified], ['Mis en avant', s.featured], ['Premium', s.premium], ['Demandes', s.requests],
     ['Demandes (7 j)', s.requests_7d], ['Messages (7 j)', s.messages_7d], ['Signalements ouverts', s.reports_open],
-    ['Vérifications en attente', s.verifications_pending],
+    ['Vérifications en attente', s.verifications_pending], ['Annonces actives', s.ads_active ?? 0],
+    ['Téléphones (push)', s.push_devices ?? 0],
   ];
   $('tab-dash').innerHTML = `<div class="grid">${items.map(([k, v], i) =>
     `<div class="stat" style="animation-delay:${i * 30}ms"><b>${v ?? 0}</b><span>${k}</span></div>`).join('')}</div>`;
@@ -168,7 +197,7 @@ async function loadVerif() {
   const box = $('tab-verif');
   box.innerHTML = '<p class="muted">Chargement…</p>';
   const { data, error } = await sb.from('verification_documents')
-    .select('id, user_id, doc_type, storage_path, status, created_at, profiles!verification_documents_user_id_fkey(full_name)')
+    .select('id, user_id, doc_type, storage_path, status, created_at, payment_reference, payment_method, amount_gnf, profiles!verification_documents_user_id_fkey(full_name)')
     .eq('status', 'pending').order('created_at');
   if (error) return (box.innerHTML = `<p class="err">${esc(friendly(error))}</p>`);
   if (!data.length) return (box.innerHTML = '<div class="card">Aucune vérification en attente. ✅</div>');
@@ -179,7 +208,8 @@ async function loadVerif() {
     el.className = 'card';
     el.innerHTML = `<div class="row" style="justify-content:space-between">
         <div><b>${esc(d.profiles?.full_name || 'Sans nom')}</b> · <span class="tag">${d.doc_type === 'identity' ? "Pièce d'identité" : "Document d'entreprise"}</span>
-        <div class="muted">Envoyé le ${date(d.created_at)}</div></div>
+        <div class="muted">Envoyé le ${date(d.created_at)}</div>
+        <div style="margin-top:4px">${d.payment_reference ? `<span class="tag ok">Paiement : ${esc(d.payment_reference)}${d.amount_gnf ? ' · ' + Number(d.amount_gnf).toLocaleString('fr-FR') + ' GNF' : ''}</span> <span class="muted">→ vérifiez la réception sur votre téléphone avant d'accepter</span>` : '<span class="tag warn">Aucune référence de paiement</span>'}</div></div>
         <div class="row"><button class="btn sm ok">Accepter</button><button class="btn sm ko">Refuser</button></div></div>
       ${signed?.signedUrl ? `<p><a href="${signed.signedUrl}" target="_blank" rel="noopener"><img class="doc" src="${signed.signedUrl}" alt="Document"></a></p>` : '<p class="err">Document illisible</p>'}`;
     const [ok, ko] = el.querySelectorAll('button');
@@ -282,6 +312,72 @@ async function userAction(id, a) {
   if (res?.error) return toast(friendly(res.error));
   toast('Enregistré ✅'); loadUsers(); loadDash();
 }
+
+// ───── Publicités ─────
+async function loadAds() {
+  const box = $('ads');
+  box.innerHTML = '<p class="muted">Chargement…</p>';
+  const { data, error } = await sb.from('ads').select('*').order('created_at', { ascending: false });
+  if (error) return (box.innerHTML = `<p class="err">${esc(friendly(error))}</p>`);
+  if (!data.length) return (box.innerHTML = '<div class="card">Aucune annonce pour le moment.</div>');
+  box.innerHTML = data.map((a) => `<div class="card row" data-id="${a.id}" style="justify-content:space-between">
+    <div class="row">${a.image_path ? `<img src="${sb.storage.from('ads').getPublicUrl(a.image_path).data.publicUrl}" style="width:64px;height:64px;object-fit:cover;border-radius:12px">` : ''}
+      <div><b>${esc(a.title)}</b> ${a.is_active ? '<span class="tag ok">Active</span>' : '<span class="tag warn">En pause</span>'}
+      <div class="muted">${esc(a.body || '')}</div>
+      <div class="muted">${a.impressions} affichages · ${a.clicks} clics${a.ends_at ? ' · fin ' + date(a.ends_at) : ''}</div></div></div>
+    <div class="row"><button class="btn sm ghost" data-a="toggle">${a.is_active ? 'Mettre en pause' : 'Réactiver'}</button>
+      <button class="btn sm ko" data-a="delete">Supprimer</button></div></div>`).join('');
+  box.querySelectorAll('button[data-a]').forEach((b) => b.onclick = async () => {
+    const id = b.closest('[data-id]').dataset.id; const ad = data.find((x) => x.id === id);
+    let res;
+    if (b.dataset.a === 'toggle') res = await sb.from('ads').update({ is_active: !ad.is_active }).eq('id', id);
+    else { if (!confirm('Supprimer cette annonce ?')) return; res = await sb.from('ads').delete().eq('id', id);
+      if (!res.error && ad.image_path) await sb.storage.from('ads').remove([ad.image_path]); }
+    if (res.error) return toast(friendly(res.error));
+    toast('Enregistré ✅'); loadAds();
+  });
+}
+$('ad-create').onclick = async () => {
+  const title = $('ad-title').value.trim();
+  const link = $('ad-link').value.trim();
+  if (title.length < 2) return toast('Titre obligatoire');
+  if (link && !link.startsWith('https://')) return toast('Le lien doit commencer par https://');
+  $('ad-create').disabled = true;
+  let image_path = null;
+  const file = $('ad-img').files[0];
+  if (file) {
+    if (file.size > 2 * 1024 * 1024) { $('ad-create').disabled = false; return toast('Image trop lourde (2 Mo max)'); }
+    image_path = `${crypto.randomUUID()}.${file.type.split('/')[1] || 'jpg'}`;
+    const up = await sb.storage.from('ads').upload(image_path, file, { contentType: file.type });
+    if (up.error) { $('ad-create').disabled = false; return toast(friendly(up.error)); }
+  }
+  const end = $('ad-end').value;
+  const { error } = await sb.from('ads').insert({
+    title, body: $('ad-body').value.trim() || null, link_url: link || null, cta: $('ad-cta').value.trim() || null,
+    image_path, ends_at: end ? new Date(end + 'T23:59:59').toISOString() : null,
+  });
+  $('ad-create').disabled = false;
+  if (error) return toast(friendly(error));
+  ['ad-title', 'ad-body', 'ad-link', 'ad-cta', 'ad-end', 'ad-img'].forEach((i) => ($(i).value = ''));
+  toast('Annonce publiée ✅'); loadAds();
+};
+
+// ───── Réglages ─────
+async function loadSettings() {
+  const { data } = await sb.from('app_settings').select('key, value');
+  const m = Object.fromEntries((data || []).map((r) => [r.key, r.value]));
+  $('fee').value = m.verification_fee_gnf ?? '';
+  $('om').value = m.payment_numbers?.orange_money ?? '';
+  $('mtn').value = m.payment_numbers?.mtn_momo ?? '';
+}
+$('save-settings').onclick = async () => {
+  const fee = $('fee').value === '' ? null : Math.max(0, parseInt($('fee').value, 10));
+  const r1 = await sb.rpc('admin_set_setting', { p_key: 'verification_fee_gnf', p_value: fee });
+  const r2 = await sb.rpc('admin_set_setting', { p_key: 'payment_numbers', p_value: {
+    orange_money: $('om').value.replace(/\s+/g, '') || null, mtn_momo: $('mtn').value.replace(/\s+/g, '') || null } });
+  const err = r1.error || r2.error;
+  toast(err ? friendly(err) : 'Réglages enregistrés ✅');
+};
 
 start();
 </script>

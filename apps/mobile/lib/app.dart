@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
+import 'core/push.dart';
 import 'core/theme.dart';
 import 'core/unread.dart';
 import 'l10n/gen/app_localizations.dart';
@@ -21,6 +22,7 @@ class _BallalAppState extends State<BallalApp> with WidgetsBindingObserver {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     Unread.instance.start();
+    PushService.instance.attachRouter(_router);
   }
 
   @override
@@ -41,6 +43,7 @@ class _BallalAppState extends State<BallalApp> with WidgetsBindingObserver {
       debugShowCheckedModeBanner: false,
       theme: buildBallalTheme(),
       routerConfig: _router,
+      scaffoldMessengerKey: PushService.instance.messengerKey,
       locale: const Locale('fr'),
       supportedLocales: AppLocalizations.supportedLocales,
       localizationsDelegates: const [

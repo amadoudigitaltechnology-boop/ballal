@@ -31,6 +31,7 @@ class _SearchScreenState extends State<SearchScreen> {
   bool _hasMore = true;
   int _requestSeq = 0;
   bool _showMap = false;
+  List<Ad> _ads = const [];
 
   @override
   void initState() {
@@ -41,6 +42,9 @@ class _SearchScreenState extends State<SearchScreen> {
       if (_scroll.position.pixels > _scroll.position.maxScrollExtent - 300) _loadMore();
     });
     _init();
+    AdsRepo.instance.active().then((a) {
+      if (mounted) setState(() => _ads = a);
+    });
   }
 
   Future<void> _init() async {
@@ -322,7 +326,9 @@ class _SearchScreenState extends State<SearchScreen> {
             return const Padding(padding: EdgeInsets.all(16), child: Center(child: CircularProgressIndicator()));
           }
           final pro = _results[i];
-          return FadeSlideIn(index: i % 10, child: ProListTile(pro: pro, trailing: FavoriteButton(proId: pro.id)));
+          final tile = FadeSlideIn(index: i % 10, child: ProListTile(pro: pro, trailing: FavoriteButton(proId: pro.id)));
+          if ((i + 1) % 10 != 0 || _ads.isEmpty) return tile;
+          return Column(children: [tile, AdCard(ad: _ads[((i + 1) ~/ 10 - 1) % _ads.length])]);
         },
       ),
     );
