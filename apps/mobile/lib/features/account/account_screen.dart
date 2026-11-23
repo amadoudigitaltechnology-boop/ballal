@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/session.dart';
 import '../../core/supa.dart';
@@ -120,26 +119,14 @@ class _SignedInState extends State<_SignedIn> {
     final l = context.l10n;
     final s = Session.instance;
     final phone = s.user?.phone;
-    var n = 0;
-    Widget item(IconData icon, String label, VoidCallback onTap) => FadeSlideIn(
-          index: n++,
-          child: ListTile(
-            leading: Container(
-              width: 38,
-              height: 38,
-              decoration: BoxDecoration(color: BallalColors.primarySoft, borderRadius: BorderRadius.circular(12)),
-              child: Icon(icon, color: BallalColors.primary, size: 20),
-            ),
-            title: Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
-            trailing: const Icon(Icons.chevron_right_rounded, color: BallalColors.muted),
-            onTap: onTap,
-          ),
+    Widget item(IconData icon, String label, VoidCallback onTap) => ListTile(
+          leading: Icon(icon, color: BallalColors.text),
+          title: Text(label),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: onTap,
         );
     return Scaffold(
-      appBar: AppBar(
-        title: Text(l.navProfile),
-        actions: [IconButton(icon: const Icon(Icons.settings_outlined), onPressed: () => context.push('/settings'))],
-      ),
+      appBar: AppBar(title: Text(l.navProfile)),
       body: ListView(padding: const EdgeInsets.only(bottom: 24), children: [
         const SizedBox(height: 8),
         Center(
@@ -162,7 +149,7 @@ class _SignedInState extends State<_SignedIn> {
           ]),
         ),
         const SizedBox(height: 10),
-        Center(child: Text(s.fullName ?? '', style: displayStyle(21, color: BallalColors.text))),
+        Center(child: Text(s.fullName ?? '', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800))),
         if (s.user?.email != null && s.user!.email!.isNotEmpty)
           Center(child: Text(s.user!.email!, style: const TextStyle(color: BallalColors.muted))),
         if (phone != null && phone.isNotEmpty)
@@ -204,10 +191,6 @@ class _SignedInState extends State<_SignedIn> {
         if (s.isClient) item(Icons.favorite_border_rounded, l.myFavorites, () => context.push('/favorites')),
         item(Icons.notifications_none_rounded, l.notifications, () => context.push('/notifications')),
         item(Icons.settings_outlined, l.settings, () => context.push('/settings')),
-        item(Icons.support_agent_rounded, l.helpSupport, () => launchUrl(
-              Uri.parse('https://wa.me/224620657693?text=${Uri.encodeComponent('Bonjour, j\'ai besoin d\'aide sur BALLAL.')}'),
-              mode: LaunchMode.externalApplication,
-            )),
         item(Icons.info_outline, l.about, () => context.push('/about')),
         const SizedBox(height: 16),
         Padding(

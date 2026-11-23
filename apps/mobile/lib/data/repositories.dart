@@ -708,12 +708,8 @@ class AccountRepo {
 
   /// Création de compte. Renvoie true si un code de confirmation a été envoyé par e-mail
   /// (false = compte connecté immédiatement). Lève 'already_registered' si l'e-mail existe déjà.
-  Future<bool> signUpWithPassword(String email, String password, {String? fullName}) async {
-    final res = await supa.auth.signUp(
-      email: email,
-      password: password,
-      data: fullName == null ? null : {'full_name': fullName},
-    );
+  Future<bool> signUpWithPassword(String email, String password) async {
+    final res = await supa.auth.signUp(email: email, password: password);
     final identities = res.user?.identities;
     if (res.user != null && identities != null && identities.isEmpty) throw const AuthException('already_registered');
     return res.session == null;

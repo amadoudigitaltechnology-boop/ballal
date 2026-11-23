@@ -229,17 +229,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     subtitle: Text(l.languageFrOnly),
                     leading: const Icon(Icons.translate_rounded),
                   ),
-                  ListTile(
-                    leading: const Icon(Icons.language_rounded),
-                    title: Text(l.language),
-                    trailing: const Text('Français', style: TextStyle(color: BallalColors.muted, fontWeight: FontWeight.w600)),
-                  ),
-                  ListTile(
-                    leading: const Icon(Icons.support_agent_rounded),
-                    title: Text(l.helpSupport),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () => launchUrl(Uri.parse('https://wa.me/224620657693'), mode: LaunchMode.externalApplication),
-                  ),
                   _header(l.legal),
                   ListTile(
                     leading: const Icon(Icons.privacy_tip_outlined),

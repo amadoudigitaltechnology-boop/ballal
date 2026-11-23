@@ -23,15 +23,12 @@ import 'features/requests/request_form_screen.dart';
 import 'features/search/search_screen.dart';
 import 'features/shell/main_shell.dart';
 
-const _authRoutes = {'/welcome', '/login', '/signup', '/otp', '/forgot-password'};
-
-/// L'écran de démarrage reste visible au moins 1,6 s (logo + front de mer animé).
-final _splashDone = ValueNotifier<bool>(false);
+const _authRoutes = {'/welcome', '/login', '/otp', '/forgot-password'};
 
 String? _redirect(BuildContext context, GoRouterState state) {
   final s = Session.instance;
   final loc = state.matchedLocation;
-  if (!s.initialized || !_splashDone.value) return loc == '/splash' ? null : '/splash';
+  if (!s.initialized) return loc == '/splash' ? null : '/splash';
 
   // Compte obligatoire : sans connexion, seuls l'accueil de présentation, la connexion et « À propos » sont accessibles.
   if (!s.isSignedIn) {
@@ -46,10 +43,9 @@ String? _redirect(BuildContext context, GoRouterState state) {
 }
 
 GoRouter buildRouter() {
-  Future.delayed(const Duration(milliseconds: 1600), () => _splashDone.value = true);
   return GoRouter(
     initialLocation: '/splash',
-    refreshListenable: Listenable.merge([Session.instance, _splashDone]),
+    refreshListenable: Session.instance,
     redirect: _redirect,
     routes: [
       GoRoute(path: '/splash', pageBuilder: (_, st) => motionPage(st, const SplashScreen(), Motion.fade)),
@@ -64,7 +60,6 @@ GoRouter buildRouter() {
           return motionPage(s, OtpScreen(email: email, mode: mode), Motion.slide);
         },
       ),
-      GoRoute(path: '/signup', pageBuilder: (_, st) => motionPage(st, const SignupScreen(), Motion.slide)),
       GoRoute(path: '/forgot-password', pageBuilder: (_, st) => motionPage(st, const ForgotPasswordScreen(), Motion.slide)),
       GoRoute(path: '/new-password', pageBuilder: (_, st) => motionPage(st, const NewPasswordScreen(), Motion.depth)),
       GoRoute(path: '/setup', pageBuilder: (_, st) => motionPage(st, const SetupScreen(), Motion.depth)),
@@ -111,7 +106,6 @@ GoRouter buildRouter() {
       GoRoute(path: '/favorites', pageBuilder: (_, st) => motionPage(st, const FavoritesScreen(), Motion.fadeThrough)),
       GoRoute(path: '/notifications', pageBuilder: (_, st) => motionPage(st, const NotificationsScreen(), Motion.fadeThrough)),
       GoRoute(path: '/settings', pageBuilder: (_, st) => motionPage(st, const SettingsScreen(), Motion.fadeThrough)),
-      GoRoute(path: '/categories', pageBuilder: (_, st) => motionPage(st, const CategoriesScreen(), Motion.fadeThrough)),
       GoRoute(path: '/verification', pageBuilder: (_, st) => motionPage(st, const VerificationScreen(), Motion.sheet)),
       GoRoute(path: '/premium', pageBuilder: (_, st) => motionPage(st, const PremiumScreen(), Motion.zoom)),
       GoRoute(path: '/pro-dashboard', pageBuilder: (_, st) => motionPage(st, const ProDashboard(), Motion.zoom)),

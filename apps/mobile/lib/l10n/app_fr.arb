@@ -76,7 +76,7 @@
   "statNew": "Nouvelles demandes",
   "statActive": "En cours",
   "statDone": "Terminées",
-  "statViews": "Vues",
+  "statViews": "Vues du profil",
   "statFavorites": "Favoris",
   "statRating": "Note moyenne",
   "editProfile": "Modifier mon profil",
@@ -634,8 +634,8 @@
   "noArchives": "Aucune archive",
   "noArchivesHint": "Les éléments que vous archivez apparaîtront ici.",
   "specialties": "Spécialités",
-  "accountCreatedTitle": "Compte créé avec succès !",
-  "accountCreatedText": "Bienvenue sur BALLAL, {name}.\nProfitez dès maintenant de tous nos services.",
+  "accountCreatedTitle": "Votre compte a été créé avec succès 🎉",
+  "accountCreatedText": "Bienvenue sur BALLAL, {name} ! Tout est prêt.",
   "@accountCreatedText": {
     "placeholders": {
       "name": {
@@ -669,24 +669,5 @@
   "changePasswordHint": "Créer ou modifier mon mot de passe",
   "myData": "Mes données",
   "noAccountForEmail": "Aucun compte n'existe avec cet e-mail. Créez un compte depuis l'écran de connexion.",
-  "codeInvalidOrExpired": "Code incorrect ou expiré. Demandez un nouveau code.",
-  "slogan": "Le bon professionnel,\nau bon endroit.",
-  "onbTitle1": "Trouvez facilement\nun service près de vous",
-  "onbText1": "Des professionnels qualifiés pour tous vos besoins.",
-  "onbTitle2": "Choisissez en confiance",
-  "onbText2": "Profils vérifiés, avis clients et qualité garantie.",
-  "noAccountYet": "Pas de compte ?",
-  "alreadyAccount": "Vous avez déjà un compte ?",
-  "joinCommunity": "Rejoignez notre communauté.",
-  "prosNearYou": "Professionnels près de vous",
-  "bannerTitleA": "Le bon professionnel,",
-  "bannerTitleB": "au bon endroit.",
-  "needSpecificService": "Besoin d'un service spécifique ?",
-  "requestAService": "Demander un service",
-  "verifiedLabel": "Vérifié",
-  "statReviews": "Avis",
-  "statExperience": "Expérience",
-  "allTab": "Toutes",
-  "unreadTab": "Non lues",
-  "helpSupport": "Aide & Support"
+  "codeInvalidOrExpired": "Code incorrect ou expiré. Demandez un nouveau code."
 }

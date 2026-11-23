@@ -159,28 +159,7 @@ class _ClientHomeState extends State<ClientHome> {
           child: ListView(padding: const EdgeInsets.only(bottom: 24), children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 12, 8, 0),
-              child: Row(children: [
-                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  const BallalLogo(size: 26),
-                  const SizedBox(height: 2),
-                  InkWell(
-                    borderRadius: BorderRadius.circular(8),
-                    onTap: _chooseZone,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 2),
-                      child: Row(mainAxisSize: MainAxisSize.min, children: [
-                        const Icon(Icons.place_rounded, size: 16, color: BallalColors.primary),
-                        const SizedBox(width: 2),
-                        Text(_zone?.name ?? 'Conakry', style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
-                        const Icon(Icons.keyboard_arrow_down_rounded, size: 18),
-                      ]),
-                    ),
-                  ),
-                ]),
-                const Spacer(),
-                const _Bell(),
-                const _Gear(),
-              ]),
+              child: Row(children: [const BallalLogo(), const Spacer(), const _Bell(), const _Gear()]),
             ),
             ListenableBuilder(
               listenable: Session.instance,
@@ -209,6 +188,23 @@ class _ClientHomeState extends State<ClientHome> {
               ),
             ),
             Padding(
+              padding: const EdgeInsets.fromLTRB(16, 6, 16, 0),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: ActionChip(
+                  avatar: const Icon(Icons.place_rounded, size: 18, color: BallalColors.primary),
+                  label: Row(mainAxisSize: MainAxisSize.min, children: [
+                    Text(_zone?.name ?? l.chooseZone, style: const TextStyle(fontWeight: FontWeight.w600)),
+                    const Icon(Icons.keyboard_arrow_down_rounded, size: 18),
+                  ]),
+                  backgroundColor: Colors.white,
+                  side: const BorderSide(color: BallalColors.border),
+                  shape: const StadiumBorder(),
+                  onPressed: _chooseZone,
+                ),
+              ),
+            ),
+            Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
               child: InkWell(
                 borderRadius: BorderRadius.circular(14),
@@ -221,7 +217,7 @@ class _ClientHomeState extends State<ClientHome> {
               ),
             ),
             _Banner(onTap: () => context.go('/search?near=1')),
-            SectionHeader(title: l.categories, action: l.seeAll, onAction: () => context.push('/categories')),
+            SectionHeader(title: l.categories),
             FutureBuilder<List<Category>>(
               future: _families,
               builder: (context, snap) {
@@ -240,12 +236,12 @@ class _ClientHomeState extends State<ClientHome> {
                     childAspectRatio: 1.05,
                     children: [
                       for (final c in shown)
-                        CategoryTile(
+                        _CategoryTile(
                           icon: categoryIcon(c.icon),
                           label: c.name,
                           onTap: () => context.go('/search?category=${c.id}'),
                         ),
-                      CategoryTile(
+                      _CategoryTile(
                         icon: Icons.apps_rounded,
                         label: l.others,
                         onTap: () => _allCategories(fams),
@@ -255,30 +251,6 @@ class _ClientHomeState extends State<ClientHome> {
                 );
               },
             ),
-            SectionHeader(title: l.prosNearYou, action: l.seeAll, onAction: () => context.go('/search')),
-            if (_feedError != null && _feed.isEmpty)
-              ErrorState(error: _feedError!, onRetry: () => _loadFeed(reset: true))
-            else if (_feed.isEmpty && _feedLoading)
-              const SizedBox(height: 120, child: LoadingView())
-            else if (_feed.isEmpty)
-              Padding(
-                padding: const EdgeInsets.all(24),
-                child: Text(l.noProYet, textAlign: TextAlign.center, style: const TextStyle(color: BallalColors.muted)),
-              ),
-            for (var i = 0; i < _feed.length; i++) ...[
-              FadeSlideIn(index: i % 10, child: ProListTile(pro: _feed[i])),
-              // Publicité discrète : une annonce après chaque série de 10 professionnels.
-              if ((i + 1) % 10 == 0 && _ads.isNotEmpty) AdCard(ad: _ads[((i + 1) ~/ 10 - 1) % _ads.length]),
-            ],
-            if (_feedHasMore && _feed.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Center(
-                  child: _feedLoading
-                      ? const CircularProgressIndicator()
-                      : OutlinedButton(onPressed: _loadFeed, child: Text(l.loadMore)),
-                ),
-              ),
             SectionHeader(title: l.recommendedForYou, action: l.seeAll, onAction: () => context.go('/search')),
             SizedBox(
               height: 236,
@@ -336,6 +308,30 @@ class _ClientHomeState extends State<ClientHome> {
                       ),
                   ]);
                 },
+              ),
+            SectionHeader(title: l.allProfessionals),
+            if (_feedError != null && _feed.isEmpty)
+              ErrorState(error: _feedError!, onRetry: () => _loadFeed(reset: true))
+            else if (_feed.isEmpty && _feedLoading)
+              const SizedBox(height: 120, child: LoadingView())
+            else if (_feed.isEmpty)
+              Padding(
+                padding: const EdgeInsets.all(24),
+                child: Text(l.noProYet, textAlign: TextAlign.center, style: const TextStyle(color: BallalColors.muted)),
+              ),
+            for (var i = 0; i < _feed.length; i++) ...[
+              FadeSlideIn(index: i % 10, child: ProListTile(pro: _feed[i])),
+              // Publicité discrète : une annonce après chaque série de 10 professionnels.
+              if ((i + 1) % 10 == 0 && _ads.isNotEmpty) AdCard(ad: _ads[((i + 1) ~/ 10 - 1) % _ads.length]),
+            ],
+            if (_feedHasMore && _feed.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Center(
+                  child: _feedLoading
+                      ? const CircularProgressIndicator()
+                      : OutlinedButton(onPressed: _loadFeed, child: Text(l.loadMore)),
+                ),
               ),
           ]),
         ),
@@ -423,13 +419,7 @@ class _Banner extends StatelessWidget {
             child: SizedBox(
               width: MediaQuery.of(context).size.width * 0.5,
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text.rich(
-                  TextSpan(children: [
-                    TextSpan(text: '${l.bannerTitleA}\n'),
-                    TextSpan(text: l.bannerTitleB, style: const TextStyle(color: Color(0xFFFFB066))),
-                  ]),
-                  style: displayStyle(19, color: Colors.white),
-                ),
+                Text(l.bannerTitle, style: displayStyle(19, color: Colors.white)),
                 const Spacer(),
                 FilledButton(
                   style: FilledButton.styleFrom(
@@ -453,27 +443,22 @@ class _Banner extends StatelessWidget {
   }
 }
 
-class CategoryTile extends StatelessWidget {
-  const CategoryTile({required this.icon, required this.label, required this.onTap});
+class _CategoryTile extends StatelessWidget {
+  const _CategoryTile({required this.icon, required this.label, required this.onTap});
   final IconData icon;
   final String label;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final color = label.length.isEven ? BallalColors.primary : BallalColors.accent;
     return BallalCard(
       padding: const EdgeInsets.all(8),
       onTap: onTap,
       child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
         Container(
-          width: 46,
-          height: 46,
-          decoration: BoxDecoration(
-            color: color == BallalColors.primary ? BallalColors.primarySoft : BallalColors.accentSoft,
-            borderRadius: BorderRadius.circular(14),
-          ),
-          child: Icon(icon, color: color, size: 26),
+          padding: const EdgeInsets.all(10),
+          decoration: const BoxDecoration(color: BallalColors.accentSoft, shape: BoxShape.circle),
+          child: Icon(icon, color: BallalColors.accent, size: 26),
         ),
         const SizedBox(height: 6),
         Text(label,
@@ -702,94 +687,6 @@ class _QuickAction extends StatelessWidget {
         const SizedBox(width: 10),
         Expanded(child: Text(label, maxLines: 2, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13))),
       ]),
-    );
-  }
-}
-
-
-/// Écran « Catégories » (maquette) : toutes les familles + carte « Besoin d'un service spécifique ? ».
-class CategoriesScreen extends StatelessWidget {
-  const CategoriesScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final l = context.l10n;
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(l.categories),
-        centerTitle: false,
-        actions: [IconButton(icon: const Icon(Icons.search_rounded), onPressed: () => context.go('/search'))],
-      ),
-      body: FutureBuilder<List<Category>>(
-        future: CatalogRepo.instance.families(),
-        builder: (context, snap) {
-          if (snap.hasError) return ErrorState(error: snap.error!, onRetry: () => (context as Element).markNeedsBuild());
-          if (!snap.hasData) return const LoadingView();
-          final fams = snap.data!;
-          return ListView(padding: const EdgeInsets.fromLTRB(16, 4, 16, 24), children: [
-            GridView.count(
-              crossAxisCount: 3,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              mainAxisSpacing: 10,
-              crossAxisSpacing: 10,
-              childAspectRatio: 1.0,
-              children: [
-                for (var i = 0; i < fams.length; i++)
-                  FadeSlideIn(
-                    index: i,
-                    child: CategoryTile(
-                      icon: categoryIcon(fams[i].icon),
-                      label: fams[i].name,
-                      onTap: () => context.go('/search?category=${fams[i].id}'),
-                    ),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 18),
-            FadeSlideIn(
-              index: 6,
-              child: Container(
-                height: 150,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(kRadius),
-                  gradient: const LinearGradient(colors: [BallalColors.primarySoft, Color(0xFFD9E6FF)]),
-                ),
-                clipBehavior: Clip.antiAlias,
-                child: Stack(children: [
-                  Positioned(
-                    right: 0,
-                    top: 0,
-                    bottom: 0,
-                    width: 130,
-                    child: ShaderMask(
-                      blendMode: BlendMode.dstIn,
-                      shaderCallback: (r) => const LinearGradient(colors: [Colors.transparent, Colors.black], stops: [0, 0.3]).createShader(r),
-                      child: Image.asset('assets/people/beauty.jpg', fit: BoxFit.cover, alignment: Alignment.topCenter),
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      SizedBox(width: 180, child: Text(l.needSpecificService, style: displayStyle(17, color: BallalColors.primaryDark))),
-                      const Spacer(),
-                      FilledButton(
-                        style: FilledButton.styleFrom(backgroundColor: BallalColors.accent, minimumSize: const Size(0, 40), padding: const EdgeInsets.symmetric(horizontal: 14)),
-                        onPressed: () => context.go('/search'),
-                        child: Row(mainAxisSize: MainAxisSize.min, children: [
-                          Text(l.requestAService, style: const TextStyle(fontSize: 13)),
-                          const SizedBox(width: 6),
-                          const Icon(Icons.arrow_forward_rounded, size: 16),
-                        ]),
-                      ),
-                    ]),
-                  ),
-                ]),
-              ),
-            ),
-          ]);
-        },
-      ),
     );
   }
 }

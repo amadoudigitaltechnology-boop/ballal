@@ -13,9 +13,10 @@ import '../../core/theme.dart';
 import '../../data/repositories.dart';
 import '../../widgets/celebration.dart';
 import '../../widgets/common.dart';
-import '../../widgets/skyline.dart';
+import '../onboarding/onboarding_screen.dart';
 
-/// Connexion (maquette) : logo, « Bienvenue ! », e-mail + mot de passe, Google.
+/// Connexion par code reçu par e-mail — gratuit, sans mot de passe.
+/// (Le téléphone / WhatsApp pourra être réactivé plus tard via AccountRepo.sendOtp.)
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -26,9 +27,11 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final _email = TextEditingController();
   final _password = TextEditingController();
+  final _confirm = TextEditingController();
   bool _loading = false;
-  bool _google = false;
+  bool _signup = false;
   bool _obscure = true;
+  String? _error;
 
   @override
   void initState() {
@@ -44,202 +47,58 @@ class _LoginScreenState extends State<LoginScreen> {
   void dispose() {
     _email.dispose();
     _password.dispose();
+    _confirm.dispose();
     super.dispose();
   }
 
-  Future<void> _submit() async {
+  Future<void> _remember(String email) async {
+    final p = await SharedPreferences.getInstance();
+    await p.setString('last_email', email);
+  }
+
+  /// Connexion ou création de compte avec e-mail + mot de passe.
+  Future<void> _passwordSubmit() async {
     final l = context.l10n;
     final email = normalizeEmail(_email.text);
     if (email == null) {
-      showInfo(context, l.emailInvalid);
-      return;
-    }
-    if (_password.text.isEmpty) {
-      showInfo(context, l.passwordTooShort);
-      return;
-    }
-    setState(() => _loading = true);
-    try {
-      await AccountRepo.instance.signInWithPassword(email, _password.text);
-      TextInput.finishAutofillContext();
-      await rememberEmail(email);
-      // La suite (profil à compléter ou accueil) est gérée par le routeur.
-    } on AuthException catch (e) {
-      if (!mounted) return;
-      final m = e.message.toLowerCase();
-      if (m.contains('not confirmed')) {
-        await AccountRepo.instance.resendSignupCode(email);
-        if (mounted) context.push('/otp', extra: {'email': email, 'mode': 'signup'});
-      } else if (m.contains('invalid')) {
-        showInfo(context, l.wrongPassword);
-      } else {
-        showError(context, e);
-      }
-    } catch (e) {
-      if (mounted) showError(context, e);
-    } finally {
-      if (mounted) setState(() => _loading = false);
-    }
-  }
-
-  Future<void> _withGoogle() async {
-    setState(() => _google = true);
-    await signInWithGoogle(context);
-    if (mounted) setState(() => _google = false);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final l = context.l10n;
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: Stack(children: [
-        const Positioned(top: 0, right: 0, child: CornerSwoosh(size: 150)),
-        SafeArea(
-          child: AutofillGroup(
-            child: ListView(padding: const EdgeInsets.fromLTRB(24, 48, 24, 24), children: [
-              const FadeSlideIn(child: Center(child: BallalLogo(size: 46))),
-              const SizedBox(height: 28),
-              FadeSlideIn(
-                index: 1,
-                child: Column(children: [
-                  Text(l.welcomeTitle, textAlign: TextAlign.center, style: displayStyle(28, color: BallalColors.text)),
-                  const SizedBox(height: 6),
-                  Text(l.loginSubtitle, textAlign: TextAlign.center, style: const TextStyle(color: BallalColors.muted, fontSize: 15)),
-                ]),
-              ),
-              const SizedBox(height: 28),
-              FadeSlideIn(
-                index: 2,
-                child: TextField(
-                  controller: _email,
-                  keyboardType: TextInputType.emailAddress,
-                  autofillHints: const [AutofillHints.email, AutofillHints.username],
-                  autocorrect: false,
-                  textInputAction: TextInputAction.next,
-                  decoration: InputDecoration(prefixIcon: const Icon(Icons.alternate_email_rounded), hintText: l.emailLabel),
-                ),
-              ),
-              const SizedBox(height: 14),
-              FadeSlideIn(
-                index: 3,
-                child: TextField(
-                  controller: _password,
-                  obscureText: _obscure,
-                  autofillHints: const [AutofillHints.password],
-                  textInputAction: TextInputAction.done,
-                  onSubmitted: (_) => _submit(),
-                  decoration: InputDecoration(
-                    prefixIcon: const Icon(Icons.lock_outline_rounded),
-                    hintText: l.passwordLabel,
-                    suffixIcon: IconButton(
-                      icon: Icon(_obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined),
-                      onPressed: () => setState(() => _obscure = !_obscure),
-                    ),
-                  ),
-                ),
-              ),
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton(
-                  onPressed: () => context.push('/forgot-password', extra: normalizeEmail(_email.text)),
-                  child: Text(l.forgotPassword, style: const TextStyle(fontWeight: FontWeight.w700)),
-                ),
-              ),
-              const SizedBox(height: 6),
-              FadeSlideIn(
-                index: 4,
-                child: FilledButton(
-                  onPressed: _loading ? null : _submit,
-                  child: _loading
-                      ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white))
-                      : Row(mainAxisSize: MainAxisSize.min, children: [
-                          Text(l.tabLogin),
-                          const SizedBox(width: 8),
-                          const Icon(Icons.arrow_forward_rounded, size: 20),
-                        ]),
-                ),
-              ),
-              const OrDivider(),
-              GoogleButton(loading: _google, onPressed: _withGoogle),
-              const SizedBox(height: 22),
-              Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                Text(l.noAccountYet, style: const TextStyle(color: BallalColors.muted)),
-                TextButton(
-                  onPressed: () => context.go('/signup'),
-                  child: Text(l.tabSignup, style: const TextStyle(fontWeight: FontWeight.w800)),
-                ),
-              ]),
-              TextButton(
-                onPressed: () => context.push('/about'),
-                child: Text(l.about, style: const TextStyle(color: BallalColors.muted, fontSize: 12)),
-              ),
-            ]),
-          ),
-        ),
-      ]),
-    );
-  }
-}
-
-/// Créer un compte (maquette) : nom complet, e-mail, mot de passe, confirmation, Google.
-class SignupScreen extends StatefulWidget {
-  const SignupScreen({super.key});
-
-  @override
-  State<SignupScreen> createState() => _SignupScreenState();
-}
-
-class _SignupScreenState extends State<SignupScreen> {
-  final _name = TextEditingController();
-  final _email = TextEditingController();
-  final _password = TextEditingController();
-  final _confirm = TextEditingController();
-  bool _loading = false;
-  bool _google = false;
-  bool _obscure = true;
-
-  @override
-  void dispose() {
-    for (final c in [_name, _email, _password, _confirm]) {
-      c.dispose();
-    }
-    super.dispose();
-  }
-
-  Future<void> _submit() async {
-    final l = context.l10n;
-    final email = normalizeEmail(_email.text);
-    if (_name.text.trim().length < 2) {
-      showInfo(context, l.nameRequired);
-      return;
-    }
-    if (email == null) {
-      showInfo(context, l.emailInvalid);
+      setState(() => _error = l.emailInvalid);
       return;
     }
     if (_password.text.length < 8) {
       showInfo(context, l.passwordTooShort);
       return;
     }
-    if (_password.text != _confirm.text) {
+    if (_signup && _password.text != _confirm.text) {
       showInfo(context, l.passwordsDontMatch);
       return;
     }
-    setState(() => _loading = true);
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
     try {
-      final needsCode = await AccountRepo.instance.signUpWithPassword(email, _password.text, fullName: _name.text.trim());
-      TextInput.finishAutofillContext();
-      await rememberEmail(email);
-      if (needsCode && mounted) context.push('/otp', extra: {'email': email, 'mode': 'signup'});
+      if (_signup) {
+        final needsCode = await AccountRepo.instance.signUpWithPassword(email, _password.text);
+        TextInput.finishAutofillContext(); // propose d'enregistrer l'identifiant dans le téléphone
+        await _remember(email);
+        if (needsCode && mounted) context.push('/otp', extra: {'email': email, 'mode': 'signup'});
+      } else {
+        await AccountRepo.instance.signInWithPassword(email, _password.text);
+        TextInput.finishAutofillContext();
+        await _remember(email);
+      }
+      // La suite (profil à compléter ou accueil) est gérée par le routeur.
     } on AuthException catch (e) {
       if (!mounted) return;
       final m = e.message.toLowerCase();
-      if (m.contains('already')) {
+      if (m.contains('already_registered') || m.contains('already registered')) {
         showInfo(context, l.emailAlreadyUsed);
-        context.go('/login');
-      } else if (m.contains('password')) {
-        showInfo(context, l.passwordTooShort);
+        setState(() => _signup = false);
+      } else if (m.contains('invalid login') || m.contains('invalid credentials')) {
+        showInfo(context, l.wrongPassword);
+      } else if (m.contains('not confirmed')) {
+        await AccountRepo.instance.resendSignupCode(email);
+        if (mounted) context.push('/otp', extra: {'email': email, 'mode': 'signup'});
       } else {
         showError(context, e);
       }
@@ -250,156 +109,246 @@ class _SignupScreenState extends State<SignupScreen> {
     }
   }
 
-  Future<void> _withGoogle() async {
+  bool _google = false;
+
+  /// « Continuer avec Google » : connexion en un clic avec le compte Gmail.
+  Future<void> _signInWithGoogle() async {
+    final l = context.l10n;
     setState(() => _google = true);
-    await signInWithGoogle(context);
-    if (mounted) setState(() => _google = false);
+    try {
+      await supa.auth.signInWithOAuth(
+        OAuthProvider.google,
+        redirectTo: 'com.amadoutechnology.ballal://login-callback',
+        // Onglet de navigateur intégré : évite que l'application Gmail intercepte la page Google.
+        authScreenLaunchMode: LaunchMode.inAppBrowserView,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      final msg = e.toString().toLowerCase();
+      showInfo(context, msg.contains('provider') || msg.contains('not enabled') ? l.googleNotReady : l.genericError);
+    } finally {
+      if (mounted) setState(() => _google = false);
+    }
+  }
+
+  Future<void> _submit() async {
+    final l = context.l10n;
+    final email = normalizeEmail(_email.text);
+    if (email == null) {
+      setState(() => _error = l.emailInvalid);
+      return;
+    }
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      await AccountRepo.instance.sendEmailOtp(email);
+      await _remember(email);
+      if (mounted) context.push('/otp', extra: {'email': email, 'mode': 'login'});
+    } catch (e) {
+      if (mounted) showError(context, e);
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final l = context.l10n;
-    Widget field(int i, TextEditingController c, IconData icon, String hint,
-            {bool password = false, TextInputType? type, Iterable<String>? hints, TextInputAction action = TextInputAction.next}) =>
-        Padding(
-          padding: const EdgeInsets.only(bottom: 12),
-          child: FadeSlideIn(
-            index: i,
-            child: TextField(
-              controller: c,
-              obscureText: password && _obscure,
-              keyboardType: type,
-              autofillHints: hints,
-              autocorrect: !password && type != TextInputType.emailAddress,
-              textCapitalization: type == TextInputType.name ? TextCapitalization.words : TextCapitalization.none,
-              textInputAction: action,
-              onSubmitted: action == TextInputAction.done ? (_) => _submit() : null,
-              decoration: InputDecoration(
-                prefixIcon: Icon(icon),
-                hintText: hint,
-                suffixIcon: password
-                    ? IconButton(
-                        icon: Icon(_obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined),
-                        onPressed: () => setState(() => _obscure = !_obscure),
-                      )
-                    : null,
-              ),
-            ),
-          ),
-        );
+    final h = MediaQuery.of(context).size.height;
     return Scaffold(
       backgroundColor: Colors.white,
-      body: Stack(children: [
-        const Positioned(top: 0, right: 0, child: CornerSwoosh(size: 130)),
-        SafeArea(
-          child: AutofillGroup(
-            child: ListView(padding: const EdgeInsets.fromLTRB(24, 8, 24, 24), children: [
-              Align(
-                alignment: Alignment.centerLeft,
-                child: IconButton(
-                  icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
-                  onPressed: () => context.canPop() ? context.pop() : context.go('/login'),
+      body: ListView(padding: EdgeInsets.zero, children: [
+        // Photo d'accueil sur la vague bleue, logo en haut à droite (maquette).
+        BallalWave(
+          height: (h * 0.42).clamp(280.0, 380.0),
+          child: Stack(children: [
+            Positioned(
+              left: 24,
+              bottom: 34,
+              top: MediaQuery.of(context).padding.top + 20,
+              child: TweenAnimationBuilder<double>(
+                tween: Tween(begin: 0, end: 1),
+                duration: const Duration(milliseconds: 700),
+                curve: Curves.easeOutCubic,
+                builder: (_, v, child) => Opacity(
+                  opacity: v,
+                  child: Transform.translate(offset: Offset(-30 * (1 - v), 0), child: child),
+                ),
+                child: AspectRatio(
+                  aspectRatio: 0.92,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(28),
+                      border: Border.all(color: Colors.white, width: 4),
+                      boxShadow: [BoxShadow(color: BallalColors.primary.withValues(alpha: 0.25), blurRadius: 24, offset: const Offset(0, 12))],
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(24),
+                      child: Image.asset('assets/people/woman_phone.jpg', fit: BoxFit.cover, alignment: Alignment.topCenter),
+                    ),
+                  ),
                 ),
               ),
-              const FadeSlideIn(child: Center(child: BallalLogo(size: 42))),
-              const SizedBox(height: 22),
-              Text(l.tabSignup, textAlign: TextAlign.center, style: displayStyle(26, color: BallalColors.text)),
-              const SizedBox(height: 6),
-              Text(l.joinCommunity, textAlign: TextAlign.center, style: const TextStyle(color: BallalColors.muted, fontSize: 15)),
-              const SizedBox(height: 24),
-              field(1, _name, Icons.person_outline_rounded, l.fullName, type: TextInputType.name, hints: const [AutofillHints.name]),
-              field(2, _email, Icons.mail_outline_rounded, l.emailLabel,
-                  type: TextInputType.emailAddress, hints: const [AutofillHints.email, AutofillHints.username]),
-              field(3, _password, Icons.lock_outline_rounded, '${l.passwordLabel} (${l.passwordHint})',
-                  password: true, hints: const [AutofillHints.newPassword]),
-              field(4, _confirm, Icons.lock_reset_rounded, l.confirmPassword,
-                  password: true, hints: const [AutofillHints.newPassword], action: TextInputAction.done),
-              const SizedBox(height: 6),
+            ),
+            Positioned(
+              right: 16,
+              top: MediaQuery.of(context).padding.top + 28,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14)),
+                child: const BallalLogo(size: 22),
+              ),
+            ),
+          ]),
+        ),
+        FadeSlideIn(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              Text(l.welcomeTitle, style: displayStyle(30, color: BallalColors.primaryDark)),
+              const SizedBox(height: 4),
+              Text(_signup ? l.signupSubtitle : l.loginSubtitle, style: const TextStyle(color: BallalColors.muted, fontSize: 15)),
+              const SizedBox(height: 18),
+              // Bascule Se connecter / Créer un compte (pastille animée).
+              Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(color: BallalColors.field, borderRadius: BorderRadius.circular(16)),
+                child: Row(children: [
+                  for (final signup in [false, true])
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () => setState(() => _signup = signup),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 220),
+                          curve: Curves.easeOutCubic,
+                          padding: const EdgeInsets.symmetric(vertical: 11),
+                          decoration: BoxDecoration(
+                            color: _signup == signup ? Colors.white : Colors.transparent,
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: _signup == signup
+                                ? [BoxShadow(color: BallalColors.primary.withValues(alpha: 0.12), blurRadius: 10, offset: const Offset(0, 3))]
+                                : null,
+                          ),
+                          child: Text(
+                            signup ? l.tabSignup : l.tabLogin,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontWeight: FontWeight.w800,
+                              color: _signup == signup ? BallalColors.primary : BallalColors.muted,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                ]),
+              ),
+              const SizedBox(height: 18),
+              AutofillGroup(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                  TextField(
+                    controller: _email,
+                    keyboardType: TextInputType.emailAddress,
+                    autofillHints: const [AutofillHints.email, AutofillHints.username],
+                    autocorrect: false,
+                    textInputAction: TextInputAction.next,
+                    decoration: InputDecoration(
+                      prefixIcon: const Icon(Icons.alternate_email_rounded),
+                      hintText: l.emailLabel,
+                      errorText: _error,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _password,
+                    obscureText: _obscure,
+                    autofillHints: [_signup ? AutofillHints.newPassword : AutofillHints.password],
+                    textInputAction: _signup ? TextInputAction.next : TextInputAction.done,
+                    onSubmitted: (_) => _signup ? null : _passwordSubmit(),
+                    decoration: InputDecoration(
+                      prefixIcon: const Icon(Icons.lock_outline_rounded),
+                      hintText: _signup ? '${l.passwordLabel} (${l.passwordHint})' : l.passwordLabel,
+                      suffixIcon: IconButton(
+                        icon: Icon(_obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined),
+                        onPressed: () => setState(() => _obscure = !_obscure),
+                      ),
+                    ),
+                  ),
+                  AnimatedSize(
+                    duration: const Duration(milliseconds: 240),
+                    curve: Curves.easeOutCubic,
+                    child: !_signup
+                        ? const SizedBox(width: double.infinity)
+                        : Padding(
+                            padding: const EdgeInsets.only(top: 12),
+                            child: TextField(
+                              controller: _confirm,
+                              obscureText: _obscure,
+                              autofillHints: const [AutofillHints.newPassword],
+                              textInputAction: TextInputAction.done,
+                              onSubmitted: (_) => _passwordSubmit(),
+                              decoration: InputDecoration(
+                                prefixIcon: const Icon(Icons.lock_reset_rounded),
+                                hintText: l.confirmPassword,
+                              ),
+                            ),
+                          ),
+                  ),
+                ]),
+              ),
+              if (!_signup)
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    onPressed: () => context.push('/forgot-password', extra: normalizeEmail(_email.text)),
+                    child: Text(l.forgotPassword),
+                  ),
+                )
+              else
+                const SizedBox(height: 16),
               FilledButton(
-                onPressed: _loading ? null : _submit,
-                child: _loading
-                    ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white))
+                onPressed: _loading ? null : _passwordSubmit,
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 200),
+                  child: _loading
+                      ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white))
+                      : Row(key: ValueKey(_signup), mainAxisSize: MainAxisSize.min, children: [
+                          Text(_signup ? l.tabSignup : l.tabLogin),
+                          const SizedBox(width: 8),
+                          const Icon(Icons.arrow_forward_rounded, size: 20),
+                        ]),
+                ),
+              ),
+              if (!_signup)
+                TextButton(onPressed: _loading ? null : _submit, child: Text(l.loginWithCode)),
+              const SizedBox(height: 16),
+              Row(children: [
+                const Expanded(child: Divider()),
+                Padding(padding: const EdgeInsets.symmetric(horizontal: 12), child: Text(l.or, style: const TextStyle(color: BallalColors.muted))),
+                const Expanded(child: Divider()),
+              ]),
+              const SizedBox(height: 16),
+              OutlinedButton(
+                onPressed: _google ? null : _signInWithGoogle,
+                style: OutlinedButton.styleFrom(minimumSize: const Size(64, 54), backgroundColor: Colors.white),
+                child: _google
+                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2.4))
                     : Row(mainAxisSize: MainAxisSize.min, children: [
-                        Text(l.tabSignup),
-                        const SizedBox(width: 8),
-                        const Icon(Icons.arrow_forward_rounded, size: 20),
+                        const _GoogleG(),
+                        const SizedBox(width: 10),
+                        Text(l.continueWithGoogle, style: const TextStyle(color: BallalColors.text, fontWeight: FontWeight.w700)),
                       ]),
               ),
-              const OrDivider(),
-              GoogleButton(loading: _google, onPressed: _withGoogle),
               const SizedBox(height: 18),
-              Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                Text(l.alreadyAccount, style: const TextStyle(color: BallalColors.muted)),
-                TextButton(
-                  onPressed: () => context.go('/login'),
-                  child: Text(l.tabLogin, style: const TextStyle(fontWeight: FontWeight.w800)),
-                ),
-              ]),
-              Text(l.termsNotice, textAlign: TextAlign.center, style: const TextStyle(color: BallalColors.muted, fontSize: 11)),
+              Text(l.termsNotice, textAlign: TextAlign.center, style: const TextStyle(color: BallalColors.muted, fontSize: 12)),
+              TextButton(onPressed: () => context.push('/about'), child: Text(l.about)),
             ]),
           ),
         ),
       ]),
     );
   }
-}
-
-Future<void> rememberEmail(String email) async {
-  final p = await SharedPreferences.getInstance();
-  await p.setString('last_email', email);
-}
-
-/// « Continuer avec Google » dans un onglet intégré (l'application Gmail n'intercepte pas la page).
-Future<void> signInWithGoogle(BuildContext context) async {
-  final l = context.l10n;
-  try {
-    await supa.auth.signInWithOAuth(
-      OAuthProvider.google,
-      redirectTo: 'com.amadoutechnology.ballal://login-callback',
-      authScreenLaunchMode: LaunchMode.inAppBrowserView,
-    );
-  } catch (e) {
-    if (!context.mounted) return;
-    final msg = e.toString().toLowerCase();
-    showInfo(context, msg.contains('provider') || msg.contains('not enabled') ? l.googleNotReady : l.genericError);
-  }
-}
-
-class OrDivider extends StatelessWidget {
-  const OrDivider({super.key});
-
-  @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 18),
-        child: Row(children: [
-          const Expanded(child: Divider()),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: Text(context.l10n.or, style: const TextStyle(color: BallalColors.muted)),
-          ),
-          const Expanded(child: Divider()),
-        ]),
-      );
-}
-
-class GoogleButton extends StatelessWidget {
-  const GoogleButton({super.key, required this.loading, required this.onPressed});
-  final bool loading;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) => OutlinedButton(
-        onPressed: loading ? null : onPressed,
-        style: OutlinedButton.styleFrom(minimumSize: const Size(64, 54), backgroundColor: Colors.white),
-        child: loading
-            ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2.4))
-            : Row(mainAxisSize: MainAxisSize.min, children: [
-                const _GoogleG(),
-                const SizedBox(width: 10),
-                Text(context.l10n.continueWithGoogle,
-                    style: const TextStyle(color: BallalColors.text, fontWeight: FontWeight.w700)),
-              ]),
-      );
 }
 
 class OtpScreen extends StatefulWidget {
@@ -622,8 +571,7 @@ class SetupScreen extends StatefulWidget {
 }
 
 class _SetupScreenState extends State<SetupScreen> {
-  final _name = TextEditingController(
-      text: Session.instance.fullName ?? (supa.auth.currentUser?.userMetadata?['full_name'] as String?) ?? '');
+  final _name = TextEditingController(text: Session.instance.fullName ?? '');
   String? _role;
   bool _accepted = false;
   bool _loading = false;

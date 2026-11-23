@@ -392,22 +392,13 @@ class ProListTile extends StatelessWidget {
             ]),
           ]),
         ),
-        SizedBox(
-          height: 88,
-          child: Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-            trailing ?? const SizedBox(height: 24),
-            if (pro.distanceKm != null)
-              Text(formatKm(pro.distanceKm!), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
-            const Spacer(),
-            // Bouton « Voir le profil » (maquette)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(gradient: kBrandGradient, borderRadius: BorderRadius.circular(20)),
-              child: Text(context.l10n.seeProfile,
-                  style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w800)),
-            ),
-          ]),
-        ),
+        Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+          trailing ?? const SizedBox(height: 24),
+          if (pro.distanceKm != null) ...[
+            const SizedBox(height: 18),
+            Text(formatKm(pro.distanceKm!), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+          ],
+        ]),
       ]),
     );
   }

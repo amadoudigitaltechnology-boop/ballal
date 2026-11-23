@@ -19,8 +19,6 @@ class ConversationsScreen extends StatefulWidget {
 
 class _ConversationsScreenState extends State<ConversationsScreen> {
   Future<List<ConversationSummary>>? _future;
-  bool _unreadOnly = false;
-  int _unreadTotal = 0;
   String _filter = '';
   int _lastUnread = -1;
 
@@ -65,29 +63,8 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
       );
     }
     return Scaffold(
-      appBar: AppBar(title: Text(l.navMessages), centerTitle: false, actions: [IconButton(icon: const Icon(Icons.edit_square), tooltip: l.navSearch, onPressed: () => context.go('/search'))]),
+      appBar: AppBar(title: Text(l.navMessages), centerTitle: false),
       body: Column(children: [
-        // Filtres Toutes / Non lues (maquette)
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 6),
-          child: Row(children: [
-            for (final unreadOnly in [false, true])
-              Padding(
-                padding: const EdgeInsets.only(right: 8),
-                child: ChoiceChip(
-                  label: Text(unreadOnly ? '${l.unreadTab}${_unreadTotal > 0 ? ' ($_unreadTotal)' : ''}' : l.allTab),
-                  selected: _unreadOnly == unreadOnly,
-                  showCheckmark: false,
-                  selectedColor: BallalColors.primarySoft,
-                  labelStyle: TextStyle(
-                    fontWeight: FontWeight.w700,
-                    color: _unreadOnly == unreadOnly ? BallalColors.primary : BallalColors.muted,
-                  ),
-                  onSelected: (_) => setState(() => _unreadOnly = unreadOnly),
-                ),
-              ),
-          ]),
-        ),
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
           child: TextField(
@@ -101,16 +78,8 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
             builder: (context, snap) {
               if (snap.hasError) return ErrorState(error: snap.error!, onRetry: _reload);
               if (!snap.hasData) return const LoadingView();
-              final all = snap.data!;
-              final total = all.fold<int>(0, (a, c) => a + (c.unreadCount > 0 ? 1 : 0));
-              if (total != _unreadTotal) {
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  if (mounted) setState(() => _unreadTotal = total);
-                });
-              }
-              final items = all
+              final items = snap.data!
                   .where((c) => _filter.isEmpty || c.otherName.toLowerCase().contains(_filter))
-                  .where((c) => !_unreadOnly || c.unreadCount > 0)
                   .toList();
               if (items.isEmpty) {
                 return EmptyState(icon: Icons.forum_outlined, title: l.noConversations, message: l.noConversationsHint);
@@ -123,7 +92,7 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
                   itemBuilder: (_, i) {
                     final c = items[i];
                     final unread = c.unreadCount > 0;
-                    return FadeSlideIn(index: i, child: ListTile(
+                    return ListTile(
                       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                       leading: Avatar(
                         url: c.otherAvatar == null ? null : publicUrl(c.otherIsPro ? 'pro-media' : 'avatars', c.otherAvatar!),
@@ -152,7 +121,7 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
                         _reload();
                         Unread.instance.refresh();
                       },
-                    ));
+                    );
                   },
                 ),
               );

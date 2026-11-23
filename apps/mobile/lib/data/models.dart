@@ -194,7 +194,6 @@ class ProDetail {
     required this.languages,
     required this.skills,
     this.locationName,
-    this.profileViews = 0,
     required this.availability,
     this.priceHint,
     required this.identityVerified,
@@ -220,7 +219,6 @@ class ProDetail {
   final List<String> languages;
   final List<String> skills;
   final String? locationName;
-  final int profileViews;
   final String availability;
   final String? priceHint;
   final bool identityVerified;
@@ -248,7 +246,6 @@ class ProDetail {
       languages: _strings(m['languages']),
       skills: _strings(m['skills']),
       locationName: loc is Map<String, dynamic> ? loc['name'] as String? : null,
-      profileViews: (m['profile_views'] as num?)?.toInt() ?? 0,
       availability: (m['availability'] as String?) ?? 'available',
       priceHint: m['price_hint'] as String?,
       identityVerified: (m['identity_verified'] as bool?) ?? false,
