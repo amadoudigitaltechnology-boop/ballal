@@ -71,36 +71,5 @@ from public.locations r
 where r.level = 'region'
 on conflict do nothing;
 
--- Communes de Conakry
-insert into public.locations (parent_id, level, name, slug, lat, lng)
-select c.id, 'commune', v.name, v.slug, v.lat, v.lng
-from public.locations c
-join public.locations r on r.id = c.parent_id and r.slug = 'conakry'
-cross join (values
-  ('Kaloum', 'kaloum', 9.5092, -13.7122), ('Dixinn', 'dixinn', 9.5450, -13.6720),
-  ('Matam', 'matam', 9.5560, -13.6450), ('Ratoma', 'ratoma', 9.6250, -13.6250),
-  ('Matoto', 'matoto', 9.5950, -13.6000)
-) as v(name, slug, lat, lng)
-where c.level = 'city' and c.slug = 'conakry'
-on conflict do nothing;
-
--- Quartiers (liste de départ, l'administration complète)
-insert into public.locations (parent_id, level, name, slug, lat, lng)
-select cm.id, 'quartier', v.name, v.slug, cm.lat, cm.lng
-from (values
-  ('kaloum', 'Almamya', 'almamya'), ('kaloum', 'Boulbinet', 'boulbinet'), ('kaloum', 'Sandervalia', 'sandervalia'),
-  ('kaloum', 'Tombo', 'tombo'), ('kaloum', 'Coronthie', 'coronthie'),
-  ('dixinn', 'Dixinn Centre', 'dixinn-centre'), ('dixinn', 'Landréah', 'landreah'), ('dixinn', 'Camayenne', 'camayenne'),
-  ('dixinn', 'Belle-Vue', 'belle-vue'), ('dixinn', 'Hafia', 'hafia'),
-  ('matam', 'Madina', 'madina'), ('matam', 'Bonfi', 'bonfi'), ('matam', 'Coléah', 'coleah'),
-  ('matam', 'Boussoura', 'boussoura'), ('matam', 'Carrière', 'carriere'),
-  ('ratoma', 'Kipé', 'kipe'), ('ratoma', 'Nongo', 'nongo'), ('ratoma', 'Lambanyi', 'lambanyi'),
-  ('ratoma', 'Taouyah', 'taouyah'), ('ratoma', 'Hamdallaye', 'hamdallaye'), ('ratoma', 'Kaporo', 'kaporo'),
-  ('ratoma', 'Sonfonia', 'sonfonia'), ('ratoma', 'Cosa', 'cosa'), ('ratoma', 'Koloma', 'koloma'),
-  ('ratoma', 'Bambeto', 'bambeto'), ('ratoma', 'Dar-es-Salam', 'dar-es-salam'),
-  ('matoto', 'Matoto Centre', 'matoto-centre'), ('matoto', 'Gbessia', 'gbessia'), ('matoto', 'Tombolia', 'tombolia'),
-  ('matoto', 'Yimbaya', 'yimbaya'), ('matoto', 'Sangoyah', 'sangoyah'), ('matoto', 'Enta', 'enta'),
-  ('matoto', 'Kissosso', 'kissosso'), ('matoto', 'Dabompa', 'dabompa')
-) as v(commune_slug, name, slug)
-join public.locations cm on cm.slug = v.commune_slug and cm.level = 'commune'
-on conflict do nothing;
+-- Communes et quartiers de Conakry (13 communes, liste officielle) : voir migration 0010
+select public.seed_conakry_communes();

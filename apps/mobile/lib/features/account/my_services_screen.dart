@@ -1,6 +1,10 @@
+import 'dart:typed_data';
+
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../core/formatters.dart';
 import '../../core/supa.dart';
@@ -78,6 +82,8 @@ class _MyServicesScreenState extends State<MyServicesScreen> {
                   margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
                   onTap: () => _edit(s),
                   child: Row(children: [
+                    ProPhoto(path: s.photos.firstOrNull, name: s.title, width: 64, height: 64, radius: 12),
+                    const SizedBox(width: 12),
                     Expanded(
                       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                         Text(s.title, style: const TextStyle(fontWeight: FontWeight.w700)),
@@ -125,8 +131,10 @@ class _ServiceFormScreenState extends State<ServiceFormScreen> {
   late final _unit = TextEditingController(text: widget.service?.priceUnit ?? '');
   late final _duration = TextEditingController(text: widget.service?.durationText ?? '');
   late String? _categoryId = widget.service?.categoryId;
-  late bool _published = (widget.service?.status ?? 'published') == 'published';
   late final Future<List<Category>> _cats = CatalogRepo.instance.trades();
+  late final List<String> _existing = [...?widget.service?.photos];
+  final List<String> _removed = [];
+  final List<Uint8List> _newPhotos = [];
   bool _saving = false;
 
   @override
@@ -137,27 +145,48 @@ class _ServiceFormScreenState extends State<ServiceFormScreen> {
     super.dispose();
   }
 
+  /// Sélection de plusieurs photos d'un coup (10 max par service).
+  Future<void> _pickPhotos() async {
+    final room = 10 - _existing.length - _newPhotos.length;
+    if (room <= 0) return;
+    final files = await ImagePicker().pickMultiImage(maxWidth: 1600, imageQuality: 75, limit: room);
+    if (files.isEmpty) return;
+    final bytes = <Uint8List>[];
+    for (final f in files.take(room)) {
+      bytes.add(await f.readAsBytes());
+    }
+    if (mounted) setState(() => _newPhotos.addAll(bytes));
+  }
+
   Future<void> _save() async {
     final l = context.l10n;
     if (!_form.currentState!.validate()) return;
     final min = int.tryParse(_priceMin.text);
     final max = int.tryParse(_priceMax.text);
-    if (min != null && max != null && max < min) { showInfo(context, l.priceRangeInvalid); return; }
+    if (min != null && max != null && max < min) {
+      showInfo(context, l.priceRangeInvalid);
+      return;
+    }
     setState(() => _saving = true);
     try {
-      await ProRepo.instance.saveService({
-        'title': _title.text.trim(),
-        'description': _description.text.trim(),
-        'category_id': _categoryId,
-        'price_min': min,
-        'price_max': max,
-        'price_unit': _unit.text.trim().isEmpty ? null : _unit.text.trim(),
-        'duration_text': _duration.text.trim().isEmpty ? null : _duration.text.trim(),
-        'status': _published ? 'published' : 'draft',
-      }, id: widget.service?.id);
+      await ProRepo.instance.saveService(
+        {
+          'title': _title.text.trim(),
+          'description': _description.text.trim(),
+          'category_id': _categoryId,
+          'price_min': min,
+          'price_max': max,
+          'price_unit': _unit.text.trim().isEmpty ? null : _unit.text.trim(),
+          'duration_text': _duration.text.trim().isEmpty ? null : _duration.text.trim(),
+          'status': 'published',
+        },
+        id: widget.service?.id,
+        newPhotos: _newPhotos,
+        removedPhotos: _removed,
+      );
       if (mounted) {
         showInfo(context, l.saved);
-        context.pop();
+        context.pop(true);
       }
     } catch (e) {
       if (mounted) showError(context, e);
@@ -166,26 +195,81 @@ class _ServiceFormScreenState extends State<ServiceFormScreen> {
     }
   }
 
+  Widget _thumb(Widget image, VoidCallback onRemove) => Stack(fit: StackFit.expand, children: [
+        ClipRRect(borderRadius: BorderRadius.circular(12), child: image),
+        Positioned(
+          right: 2,
+          top: 2,
+          child: IconButton(
+            visualDensity: VisualDensity.compact,
+            style: IconButton.styleFrom(backgroundColor: Colors.black54, foregroundColor: Colors.white),
+            icon: const Icon(Icons.close, size: 16),
+            onPressed: onRemove,
+          ),
+        ),
+      ]);
+
   @override
   Widget build(BuildContext context) {
     final l = context.l10n;
+    final count = _existing.length + _newPhotos.length;
     return Scaffold(
       appBar: AppBar(title: Text(widget.service == null ? l.addService : l.editService)),
       body: Form(
         key: _form,
-        child: ListView(padding: const EdgeInsets.all(16), children: [
+        child: ListView(padding: const EdgeInsets.fromLTRB(16, 8, 16, 110), children: [
+          FieldLabel(l.servicePhotos),
+          GridView.count(
+            crossAxisCount: 3,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            mainAxisSpacing: 8,
+            crossAxisSpacing: 8,
+            children: [
+              for (final path in _existing)
+                _thumb(CachedNetworkImage(imageUrl: proImageUrl(path)!, fit: BoxFit.cover), () => setState(() {
+                      _existing.remove(path);
+                      _removed.add(path);
+                    })),
+              for (final b in _newPhotos) _thumb(Image.memory(b, fit: BoxFit.cover), () => setState(() => _newPhotos.remove(b))),
+              if (count < 10)
+                InkWell(
+                  onTap: _pickPhotos,
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: BallalColors.primarySoft,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: BallalColors.primary.withValues(alpha: 0.3)),
+                    ),
+                    child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                      const Icon(Icons.add_photo_alternate_outlined, color: BallalColors.primary),
+                      const SizedBox(height: 4),
+                      Text(l.addPhotos, textAlign: TextAlign.center,
+                          style: const TextStyle(fontSize: 11, color: BallalColors.primary, fontWeight: FontWeight.w700)),
+                    ]),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          FieldLabel(l.serviceTitle),
           TextFormField(
             controller: _title,
             maxLength: 120,
-            decoration: InputDecoration(labelText: l.serviceTitle, hintText: l.serviceTitleHint),
+            buildCounter: noCounter,
+            textCapitalization: TextCapitalization.sentences,
+            decoration: InputDecoration(hintText: l.serviceTitleHint),
             validator: (v) => (v ?? '').trim().length < 2 ? l.required : null,
           ),
+          const SizedBox(height: 12),
+          FieldLabel(l.category),
           FutureBuilder<List<Category>>(
             future: _cats,
             builder: (context, snap) => DropdownButtonFormField<String?>(
               initialValue: _categoryId,
               isExpanded: true,
-              decoration: InputDecoration(labelText: l.category),
+              decoration: const InputDecoration(),
               items: [
                 DropdownMenuItem(value: null, child: Text(l.none)),
                 for (final c in snap.data ?? const <Category>[]) DropdownMenuItem(value: c.id, child: Text(c.name)),
@@ -193,50 +277,67 @@ class _ServiceFormScreenState extends State<ServiceFormScreen> {
               onChanged: (v) => setState(() => _categoryId = v),
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
+          FieldLabel(l.description),
           TextFormField(
             controller: _description,
-            maxLines: 4,
+            minLines: 3,
+            maxLines: 6,
             maxLength: 2000,
-            decoration: InputDecoration(labelText: l.description, alignLabelWithHint: true),
+            buildCounter: noCounter,
+            textCapitalization: TextCapitalization.sentences,
+            decoration: InputDecoration(hintText: l.serviceDescriptionHint),
           ),
+          const SizedBox(height: 12),
           Row(children: [
             Expanded(
-              child: TextFormField(
-                controller: _priceMin,
-                keyboardType: TextInputType.number,
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                decoration: InputDecoration(labelText: l.priceFrom, suffixText: 'GNF'),
-              ),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                FieldLabel(l.priceFrom),
+                TextFormField(
+                  controller: _priceMin,
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  decoration: const InputDecoration(hintText: '50 000', suffixText: 'GNF'),
+                ),
+              ]),
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: TextFormField(
-                controller: _priceMax,
-                keyboardType: TextInputType.number,
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                decoration: InputDecoration(labelText: l.priceTo, suffixText: 'GNF'),
-              ),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                FieldLabel(l.priceTo),
+                TextFormField(
+                  controller: _priceMax,
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  decoration: const InputDecoration(hintText: '150 000', suffixText: 'GNF'),
+                ),
+              ]),
             ),
           ]),
           const SizedBox(height: 12),
-          TextFormField(controller: _unit, maxLength: 40, decoration: InputDecoration(labelText: l.priceUnit, hintText: l.priceUnitHint)),
-          TextFormField(controller: _duration, maxLength: 60, decoration: InputDecoration(labelText: l.duration, hintText: l.durationHint)),
+          FieldLabel(l.priceUnit),
+          TextFormField(controller: _unit, maxLength: 40, buildCounter: noCounter, decoration: InputDecoration(hintText: l.priceUnitHint)),
+          const SizedBox(height: 12),
+          FieldLabel(l.duration),
+          TextFormField(controller: _duration, maxLength: 60, buildCounter: noCounter, decoration: InputDecoration(hintText: l.durationHint)),
+          const SizedBox(height: 8),
           Text(l.indicativeOnly, style: const TextStyle(fontSize: 12, color: BallalColors.muted)),
-          SwitchListTile(
-            contentPadding: EdgeInsets.zero,
-            title: Text(l.publishService),
-            value: _published,
-            onChanged: (v) => setState(() => _published = v),
-          ),
-          const SizedBox(height: 16),
-          FilledButton(
-            onPressed: _saving ? null : _save,
-            child: _saving
-                ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white))
-                : Text(l.save),
-          ),
         ]),
+      ),
+      bottomNavigationBar: SafeArea(
+        child: Container(
+          color: Colors.white,
+          padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+          child: SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              onPressed: _saving ? null : _save,
+              child: _saving
+                  ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white))
+                  : Text(l.saveAndPublish),
+            ),
+          ),
+        ),
       ),
     );
   }

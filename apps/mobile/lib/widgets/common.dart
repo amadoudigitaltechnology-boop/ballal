@@ -10,29 +10,85 @@ import '../data/models.dart';
 import '../data/repositories.dart';
 import '../l10n/gen/app_localizations.dart';
 
-/// Logo texte BALLAL (remplaçable par le fichier officiel dans assets/).
+/// Logo officiel BALLAL (assets/logo_ballal.png).
 class BallalLogo extends StatelessWidget {
   const BallalLogo({super.key, this.size = 28});
   final double size;
 
   @override
   Widget build(BuildContext context) {
-    return ShaderMask(
-      shaderCallback: (r) => const LinearGradient(
-        colors: [BallalColors.primary, BallalColors.primaryDark, BallalColors.accent],
-        stops: [0, 0.6, 1],
-      ).createShader(r),
-      child: Text(
-        'BALLAL',
-        semanticsLabel: 'BALLAL',
-        style: TextStyle(
-          fontSize: size,
-          fontWeight: FontWeight.w900,
-          fontStyle: FontStyle.italic,
-          letterSpacing: 1.2,
-          color: Colors.white,
+    return Image.asset(
+      'assets/logo_ballal.png',
+      height: size * 1.15,
+      fit: BoxFit.contain,
+      filterQuality: FilterQuality.high,
+      semanticLabel: 'BALLAL',
+    );
+  }
+}
+
+/// Visionneuse plein écran (glisser pour changer de photo, pincer pour zoomer).
+Future<void> showPhotoViewer(BuildContext context, List<String> urls, int initial) {
+  return Navigator.of(context).push(PageRouteBuilder<void>(
+    opaque: false,
+    barrierColor: Colors.black,
+    pageBuilder: (ctx, anim, __) => FadeTransition(
+      opacity: anim,
+      child: Scaffold(
+        backgroundColor: Colors.black,
+        appBar: AppBar(backgroundColor: Colors.black, foregroundColor: Colors.white),
+        body: PageView.builder(
+          controller: PageController(initialPage: initial),
+          itemCount: urls.length,
+          itemBuilder: (_, i) => InteractiveViewer(
+            child: Center(child: CachedNetworkImage(imageUrl: urls[i], fit: BoxFit.contain)),
+          ),
         ),
       ),
+    ),
+  ));
+}
+
+/// Photo d'un pro (ou dégradé avec initiales), recadrée pour remplir la zone quelle que soit sa taille.
+class ProPhoto extends StatelessWidget {
+  const ProPhoto({super.key, required this.path, required this.name, this.width, this.height, this.radius = 16});
+  final String? path;
+  final String name;
+  final double? width;
+  final double? height;
+  final double radius;
+
+  @override
+  Widget build(BuildContext context) {
+    final initials = name.trim().isEmpty
+        ? '?'
+        : name.trim().split(RegExp(r'\s+')).take(2).map((w) => w[0].toUpperCase()).join();
+    final fallback = Container(
+      width: width,
+      height: height,
+      alignment: Alignment.center,
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [BallalColors.primary, BallalColors.primaryDark],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: Text(initials, style: const TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.w800)),
+    );
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(radius),
+      child: path == null
+          ? fallback
+          : CachedNetworkImage(
+              imageUrl: proImageUrl(path)!,
+              width: width,
+              height: height,
+              fit: BoxFit.cover,
+              memCacheWidth: 600,
+              placeholder: (_, __) => Container(width: width, height: height, color: BallalColors.field),
+              errorWidget: (_, __, ___) => fallback,
+            ),
     );
   }
 }
@@ -276,7 +332,7 @@ IconData categoryIcon(String? key) => switch (key) {
       _ => Icons.handyman_rounded,
     };
 
-/// Ligne de résultat (écran Recherche / Favoris), fidèle à la maquette.
+/// Ligne de résultat (Accueil, Recherche, Favoris) avec photo, comme sur la maquette.
 class ProListTile extends StatelessWidget {
   const ProListTile({super.key, required this.pro, this.onTap, this.trailing});
   final ProCard pro;
@@ -287,17 +343,17 @@ class ProListTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return BallalCard(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(10),
       onTap: onTap ?? () => context.push('/pro/${pro.id}'),
       child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Avatar(url: proImageUrl(pro.logoPath), name: pro.displayName, size: 64, radius: 14),
+        ProPhoto(path: pro.logoPath, name: pro.displayName, width: 88, height: 88, radius: 14),
         const SizedBox(width: 12),
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Row(children: [
               Flexible(
                 child: Text(pro.displayName,
-                    maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+                    maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
               ),
               const SizedBox(width: 4),
               VerifiedBadge(identity: pro.identityVerified, company: pro.companyVerified, size: 16),
@@ -321,7 +377,7 @@ class ProListTile extends StatelessWidget {
           trailing ?? const SizedBox(height: 24),
           if (pro.distanceKm != null) ...[
             const SizedBox(height: 18),
-            Text(formatKm(pro.distanceKm!), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+            Text(formatKm(pro.distanceKm!), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
           ],
         ]),
       ]),
@@ -329,7 +385,7 @@ class ProListTile extends StatelessWidget {
   }
 }
 
-/// Carte compacte « Recommandés pour vous » avec explication.
+/// Carte « Recommandés pour vous » : grande photo en haut, puis nom, métier, note et raison.
 class ProRecoCard extends StatelessWidget {
   const ProRecoCard({super.key, required this.pro, required this.onTap});
   final ProCard pro;
@@ -338,44 +394,41 @@ class ProRecoCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 200,
+      width: 168,
       child: BallalCard(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(8),
         onTap: onTap,
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Row(children: [
-            Avatar(url: proImageUrl(pro.logoPath), name: pro.displayName, size: 44, radius: 12),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Row(children: [
-                  Flexible(
-                    child: Text(pro.displayName,
-                        maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w700)),
-                  ),
-                  VerifiedBadge(identity: pro.identityVerified, company: pro.companyVerified, size: 14),
-                ]),
-                Text(pro.headline, maxLines: 1, overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 12, color: BallalColors.muted)),
-              ]),
-            ),
+          Stack(children: [
+            ProPhoto(path: pro.logoPath, name: pro.displayName, width: double.infinity, height: 112, radius: 14),
+            if (pro.identityVerified || pro.companyVerified)
+              Positioned(
+                top: 6,
+                right: 6,
+                child: Container(
+                  padding: const EdgeInsets.all(3),
+                  decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+                  child: VerifiedBadge(identity: pro.identityVerified, company: pro.companyVerified, size: 16),
+                ),
+              ),
           ]),
           const SizedBox(height: 8),
+          Text(pro.displayName, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w800)),
+          Text(pro.headline, maxLines: 1, overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 12, color: BallalColors.muted)),
+          const SizedBox(height: 4),
           RatingRow(rating: pro.ratingAvg, count: pro.ratingCount, size: 12),
-          const Spacer(),
-          if (pro.reasons.isNotEmpty)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(color: BallalColors.primarySoft, borderRadius: BorderRadius.circular(8)),
-              child: Row(mainAxisSize: MainAxisSize.min, children: [
-                const Icon(Icons.auto_awesome_rounded, size: 12, color: BallalColors.primary),
-                const SizedBox(width: 4),
-                Flexible(
-                  child: Text(pro.reasons.first, maxLines: 1, overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontSize: 11, color: BallalColors.primary, fontWeight: FontWeight.w600)),
-                ),
-              ]),
-            ),
+          if (pro.reasons.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Row(children: [
+              const Icon(Icons.auto_awesome_rounded, size: 12, color: BallalColors.primary),
+              const SizedBox(width: 4),
+              Expanded(
+                child: Text(pro.reasons.first, maxLines: 1, overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 11, color: BallalColors.primary, fontWeight: FontWeight.w600)),
+              ),
+            ]),
+          ],
         ]),
       ),
     );
@@ -402,6 +455,7 @@ class _PlacePicker extends StatefulWidget {
 class _PlacePickerState extends State<_PlacePicker> {
   final List<Place> _trail = [];
   late Future<List<Place>> _future;
+  String _filter = '';
 
   @override
   void initState() {
@@ -412,9 +466,11 @@ class _PlacePickerState extends State<_PlacePicker> {
   Future<List<Place>> _load() async {
     final repo = CatalogRepo.instance;
     if (_trail.isEmpty) {
-      // On commence directement par les villes de Guinée (pays > région > ville).
+      // On commence par les villes (Conakry en premier).
       final all = await repo.places();
-      return all.where((p) => p.level == 'city').toList();
+      final cities = all.where((p) => p.level == 'city').toList()
+        ..sort((a, b) => a.name == 'Conakry' ? -1 : (b.name == 'Conakry' ? 1 : a.name.compareTo(b.name)));
+      return cities;
     }
     return repo.children(_trail.last.id);
   }
@@ -422,6 +478,7 @@ class _PlacePickerState extends State<_PlacePicker> {
   void _open(Place p) {
     setState(() {
       _trail.add(p);
+      _filter = '';
       _future = _load();
     });
   }
@@ -429,25 +486,69 @@ class _PlacePickerState extends State<_PlacePicker> {
   void _back() {
     setState(() {
       _trail.removeLast();
+      _filter = '';
       _future = _load();
     });
+  }
+
+  /// « Mon quartier n'est pas dans la liste » : l'utilisateur tape le nom, on l'enregistre.
+  Future<void> _addManually() async {
+    final l = context.l10n;
+    if (!Session.instance.isSignedIn) {
+      showInfo(context, l.loginToAddZone);
+      return;
+    }
+    final parent = _trail.last;
+    final ctrl = TextEditingController(text: _filter);
+    final name = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(parent.level == 'city' ? l.addCommuneTitle(parent.name) : l.addQuartierTitle(parent.name)),
+        content: TextField(
+          controller: ctrl,
+          autofocus: true,
+          textCapitalization: TextCapitalization.words,
+          decoration: InputDecoration(hintText: l.zoneNameHint),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text(l.cancel)),
+          FilledButton(onPressed: () => Navigator.pop(ctx, ctrl.text.trim()), child: Text(l.add)),
+        ],
+      ),
+    );
+    ctrl.dispose();
+    if (name == null || name.length < 2 || !mounted) return;
+    try {
+      final place = await CatalogRepo.instance.addLocation(parent.id, name);
+      if (mounted) Navigator.pop(context, place);
+    } catch (e) {
+      if (mounted) showError(context, e);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final l = context.l10n;
+    final canAdd = _trail.isNotEmpty && const {'city', 'commune', 'prefecture'}.contains(_trail.last.level);
     return SizedBox(
-      height: MediaQuery.of(context).size.height * 0.75,
+      height: MediaQuery.of(context).size.height * 0.8,
       child: Column(children: [
         ListTile(
           leading: _trail.isEmpty ? null : IconButton(icon: const Icon(Icons.arrow_back), onPressed: _back),
           title: Text(_trail.isEmpty ? (widget.title ?? l.chooseZone) : _trail.last.name,
-              style: const TextStyle(fontWeight: FontWeight.w700)),
+              style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+          child: TextField(
+            onChanged: (v) => setState(() => _filter = v.trim()),
+            decoration: InputDecoration(prefixIcon: const Icon(Icons.search_rounded), hintText: l.searchZone),
+          ),
         ),
         if (_trail.isNotEmpty)
           ListTile(
             leading: const Icon(Icons.check_circle_outline, color: BallalColors.primary),
-            title: Text(l.allOfZone(_trail.last.name)),
+            title: Text(l.allOfZone(_trail.last.name), style: const TextStyle(fontWeight: FontWeight.w600)),
             onTap: () => Navigator.pop(context, _trail.last),
           ),
         const Divider(),
@@ -457,11 +558,20 @@ class _PlacePickerState extends State<_PlacePicker> {
             builder: (context, snap) {
               if (snap.hasError) return ErrorState(error: snap.error!, onRetry: () => setState(() => _future = _load()));
               if (!snap.hasData) return const LoadingView();
-              final items = snap.data!;
-              if (items.isEmpty) return Center(child: Text(l.noSubZones));
+              final q = _filter.toLowerCase();
+              final items = snap.data!.where((p) => q.isEmpty || p.name.toLowerCase().contains(q)).toList();
               return ListView.builder(
-                itemCount: items.length,
+                itemCount: items.length + (canAdd ? 1 : 0),
                 itemBuilder: (_, i) {
+                  if (i == items.length) {
+                    return ListTile(
+                      leading: const Icon(Icons.add_location_alt_outlined, color: BallalColors.accent),
+                      title: Text(_trail.last.level == 'city' ? l.communeNotListed : l.quartierNotListed,
+                          style: const TextStyle(color: BallalColors.accent, fontWeight: FontWeight.w700)),
+                      subtitle: Text(l.typeItYourself),
+                      onTap: _addManually,
+                    );
+                  }
                   final p = items[i];
                   final leaf = p.level == 'quartier';
                   return ListTile(

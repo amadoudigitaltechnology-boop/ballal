@@ -492,5 +492,63 @@
     }
   },
   "checkSpam": "Pas reçu ? Regardez dans les spams ou « Promotions ».",
-  "changeEmail": "Modifier l'adresse e-mail"
+  "changeEmail": "Modifier l'adresse e-mail",
+  "add": "Ajouter",
+  "addCommuneTitle": "Ajouter une commune à {city}",
+  "@addCommuneTitle": {
+    "placeholders": {
+      "city": {
+        "type": "String"
+      }
+    }
+  },
+  "addQuartierTitle": "Ajouter un quartier à {commune}",
+  "@addQuartierTitle": {
+    "placeholders": {
+      "commune": {
+        "type": "String"
+      }
+    }
+  },
+  "addPhotos": "Ajouter des photos",
+  "allProfessionals": "Tous les professionnels",
+  "change": "Changer",
+  "communeNotListed": "Ma commune n'est pas dans la liste",
+  "quartierNotListed": "Mon quartier n'est pas dans la liste",
+  "typeItYourself": "Saisissez-le vous-même",
+  "coverHint": "Bannière : n'importe quelle photo convient, elle est recadrée automatiquement (idéal : 1080 × 600).",
+  "editProProfileHint": "Nom, métier, photos, zones, horaires",
+  "editTrades": "Modifier mes métiers",
+  "loadMore": "Voir plus",
+  "loginEmail": "Adresse e-mail de connexion",
+  "loginToAddZone": "Connectez-vous pour ajouter un quartier.",
+  "myAccount": "Mon compte",
+  "myName": "Mon nom",
+  "nameRequired": "Indiquez au moins le nom affiché.",
+  "password": "Mot de passe",
+  "noPasswordNeeded": "Aucun mot de passe : vous recevez un code par e-mail à chaque connexion.",
+  "noProYet": "Aucun professionnel publié pour le moment.",
+  "noTradeYet": "Aucun métier choisi pour le moment.",
+  "otherZones": "Autres zones où vous travaillez",
+  "portfolioHint": "Sélectionnez plusieurs photos en une fois.",
+  "proDisplayNameHint": "Ex. : Mamadou Électricité",
+  "proSpace": "Mon espace pro",
+  "proSpaceHint": "Demandes reçues, statistiques, disponibilité",
+  "profileSavedPublished": "Profil enregistré et publié ✅",
+  "saveAndPublish": "Enregistrer et publier",
+  "searchTrade": "Rechercher un métier…",
+  "searchZone": "Rechercher une commune, un quartier…",
+  "serviceDescriptionHint": "Décrivez ce que comprend ce service",
+  "servicePhotos": "Photos du service",
+  "tapToSetPrimary": "Touchez un métier pour en faire votre métier principal (★).",
+  "tradesCount": "{count} sur 5 sélectionnés",
+  "@tradesCount": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "validate": "Valider",
+  "zoneNameHint": "Nom du quartier"
 }

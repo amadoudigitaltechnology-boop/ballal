@@ -248,7 +248,7 @@ class _Header extends StatelessWidget {
     return BallalCard(
       margin: const EdgeInsets.fromLTRB(16, 12, 16, 4),
       child: Row(children: [
-        Avatar(url: proImageUrl(pro.logoPath), name: pro.displayName, size: 64),
+        ProPhoto(path: pro.logoPath, name: pro.displayName, width: 76, height: 76, radius: 38),
         const SizedBox(width: 14),
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -357,10 +357,13 @@ class _AboutTab extends StatelessWidget {
               mainAxisSpacing: 6,
               crossAxisSpacing: 6,
               children: [
-                for (final p in items)
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(10),
-                    child: CachedNetworkImage(imageUrl: proImageUrl(p)!, fit: BoxFit.cover, memCacheWidth: 300),
+                for (var i = 0; i < items.length; i++)
+                  GestureDetector(
+                    onTap: () => showPhotoViewer(context, items.map((p) => proImageUrl(p)!).toList(), i),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(10),
+                      child: CachedNetworkImage(imageUrl: proImageUrl(items[i])!, fit: BoxFit.cover, memCacheWidth: 300),
+                    ),
                   ),
               ],
             ),
@@ -493,6 +496,30 @@ class _ServicesTab extends StatelessWidget {
                   const SizedBox(width: 8),
                   Expanded(child: Text(s.title, style: const TextStyle(fontWeight: FontWeight.w700))),
                 ]),
+                if (s.photos.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    height: 110,
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: s.photos.length,
+                      separatorBuilder: (_, __) => const SizedBox(width: 8),
+                      itemBuilder: (_, j) => GestureDetector(
+                        onTap: () => showPhotoViewer(context, s.photos.map((p) => proImageUrl(p)!).toList(), j),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: CachedNetworkImage(
+                            imageUrl: proImageUrl(s.photos[j])!,
+                            width: 140,
+                            height: 110,
+                            fit: BoxFit.cover,
+                            memCacheWidth: 420,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
                 if (s.description.isNotEmpty) ...[const SizedBox(height: 6), Text(s.description)],
                 if (price.isNotEmpty || s.durationText != null) ...[
                   const SizedBox(height: 8),

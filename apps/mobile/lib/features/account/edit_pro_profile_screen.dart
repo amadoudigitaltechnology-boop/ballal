@@ -25,7 +25,7 @@ TimeOfDay _parseTime(String s) {
   return TimeOfDay(hour: int.parse(parts[0]), minute: int.parse(parts[1]));
 }
 
-/// Création / modification du profil professionnel (cahier §3 et §4).
+/// Profil professionnel : saisie libre, enregistrement = publication automatique.
 class EditProProfileScreen extends StatefulWidget {
   const EditProProfileScreen({super.key});
 
@@ -34,7 +34,6 @@ class EditProProfileScreen extends StatefulWidget {
 }
 
 class _EditProProfileScreenState extends State<EditProProfileScreen> {
-  final _form = GlobalKey<FormState>();
   final _name = TextEditingController();
   final _headline = TextEditingController();
   final _description = TextEditingController();
@@ -48,15 +47,18 @@ class _EditProProfileScreenState extends State<EditProProfileScreen> {
   Set<String> _languages = {'fr'};
   bool _showPhone = true;
   bool _showWhatsapp = true;
-  bool _published = false;
   String? _logoPath;
   String? _coverPath;
+  bool _uploadingLogo = false;
+  bool _uploadingCover = false;
   Place? _base;
+  String? _baseLabel;
   final Map<String, Place> _areas = {};
   final Set<String> _categoryIds = {};
   String? _primaryCategory;
   final List<_DayHours> _hours = List.generate(7, (_) => _DayHours());
   List<Map<String, dynamic>> _portfolio = [];
+  int _portfolioUploading = 0;
 
   List<Category> _allCategories = [];
   bool _loading = true;
@@ -88,7 +90,7 @@ class _EditProProfileScreenState extends State<EditProProfileScreen> {
         ProRepo.instance.myProfile(),
         ProRepo.instance.myContacts(),
         CatalogRepo.instance.categories(),
-        CatalogRepo.instance.places(),
+        CatalogRepo.instance.places(force: true),
         supa.from('opening_hours').select('weekday, opens, closes').eq('professional_id', currentUserId!),
         supa.from('portfolio_items').select('id, storage_path').eq('professional_id', currentUserId!).order('created_at'),
       ]);
@@ -108,10 +110,10 @@ class _EditProProfileScreenState extends State<EditProProfileScreen> {
         _priceHint.text = (p['price_hint'] as String?) ?? '';
         _proType = (p['pro_type'] as String?) ?? 'independent';
         _languages = ((p['languages'] as List?) ?? const ['fr']).map((e) => e.toString()).toSet();
-        _published = (p['is_published'] as bool?) ?? false;
         _logoPath = p['logo_path'] as String?;
         _coverPath = p['cover_path'] as String?;
         _base = places.where((x) => x.id == p['location_id']).firstOrNull;
+        if (_base != null) _baseLabel = await CatalogRepo.instance.label(_base!);
         for (final a in (p['service_areas'] as List? ?? const [])) {
           final place = places.where((x) => x.id == (a as Map<String, dynamic>)['location_id']).firstOrNull;
           if (place != null) _areas[place.id] = place;
@@ -121,6 +123,7 @@ class _EditProProfileScreenState extends State<EditProProfileScreen> {
         }
         _primaryCategory = _categoryIds.firstOrNull;
       }
+      if (_name.text.isEmpty) _name.text = Session.instance.fullName ?? '';
       if (c != null) {
         _phone.text = (c['phone'] as String?) ?? '';
         _whatsapp.text = (c['whatsapp'] as String?) ?? '';
@@ -140,8 +143,9 @@ class _EditProProfileScreenState extends State<EditProProfileScreen> {
   }
 
   Future<void> _pickImage(bool logo) async {
-    final file = await ImagePicker().pickImage(source: ImageSource.gallery, maxWidth: logo ? 600 : 1600, imageQuality: 75);
+    final file = await ImagePicker().pickImage(source: ImageSource.gallery, maxWidth: logo ? 800 : 1920, imageQuality: 80);
     if (file == null) return;
+    setState(() => logo ? _uploadingLogo = true : _uploadingCover = true);
     try {
       final path = await AccountRepo.instance.uploadPublicImage('pro-media', await file.readAsBytes(), logo ? 'logo' : 'cover');
       setState(() {
@@ -153,19 +157,29 @@ class _EditProProfileScreenState extends State<EditProProfileScreen> {
       });
     } catch (e) {
       if (mounted) showError(context, e);
+    } finally {
+      if (mounted) setState(() => logo ? _uploadingLogo = false : _uploadingCover = false);
     }
   }
 
+  /// Plusieurs photos de réalisations en une seule sélection.
   Future<void> _addPortfolio() async {
-    final file = await ImagePicker().pickImage(source: ImageSource.gallery, maxWidth: 1600, imageQuality: 72);
-    if (file == null) return;
-    try {
-      final path = await AccountRepo.instance.uploadPublicImage('pro-media', await file.readAsBytes(), 'portfolio');
-      final row = await supa.from('portfolio_items')
-          .insert({'professional_id': currentUserId, 'storage_path': path}).select('id, storage_path').single();
-      setState(() => _portfolio.add(row));
-    } catch (e) {
-      if (mounted) showError(context, e);
+    final room = 30 - _portfolio.length;
+    if (room <= 0) return;
+    final files = await ImagePicker().pickMultiImage(maxWidth: 1600, imageQuality: 75, limit: room);
+    if (files.isEmpty) return;
+    setState(() => _portfolioUploading = files.length);
+    for (final file in files.take(room)) {
+      try {
+        final path = await AccountRepo.instance.uploadPublicImage('pro-media', await file.readAsBytes(), 'portfolio');
+        final row = await supa.from('portfolio_items')
+            .insert({'professional_id': currentUserId, 'storage_path': path}).select('id, storage_path').single();
+        if (mounted) setState(() => _portfolio.add(row));
+      } catch (e) {
+        if (mounted) showError(context, e);
+      } finally {
+        if (mounted) setState(() => _portfolioUploading--);
+      }
     }
   }
 
@@ -180,47 +194,10 @@ class _EditProProfileScreenState extends State<EditProProfileScreen> {
   }
 
   Future<void> _chooseCategories() async {
-    final selected = Set<String>.from(_categoryIds);
-    final families = _allCategories.where((c) => c.isFamily).toList();
     final result = await showModalBottomSheet<Set<String>>(
       context: context,
       isScrollControlled: true,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setSheet) => DraggableScrollableSheet(
-          expand: false,
-          initialChildSize: 0.85,
-          builder: (_, controller) => Column(children: [
-            ListTile(
-              title: Text(context.l10n.chooseTrades, style: const TextStyle(fontWeight: FontWeight.w700)),
-              subtitle: Text(context.l10n.maxTrades),
-              trailing: FilledButton(onPressed: () => Navigator.pop(ctx, selected), child: Text(context.l10n.ok)),
-            ),
-            Expanded(
-              child: ListView(controller: controller, children: [
-                for (final f in families) ...[
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-                    child: Text(f.name, style: const TextStyle(fontWeight: FontWeight.w800, color: BallalColors.primary)),
-                  ),
-                  for (final t in _allCategories.where((c) => c.parentId == f.id))
-                    CheckboxListTile(
-                      dense: true,
-                      title: Text(t.name),
-                      value: selected.contains(t.id),
-                      onChanged: (v) => setSheet(() {
-                        if (v == true && selected.length < 5) {
-                          selected.add(t.id);
-                        } else {
-                          selected.remove(t.id);
-                        }
-                      }),
-                    ),
-                ],
-              ]),
-            ),
-          ]),
-        ),
-      ),
+      builder: (_) => _TradesSheet(all: _allCategories, initial: _categoryIds),
     );
     if (result != null) {
       setState(() {
@@ -232,24 +209,42 @@ class _EditProProfileScreenState extends State<EditProProfileScreen> {
     }
   }
 
+  Future<void> _chooseBase() async {
+    final p = await pickPlace(context, title: context.l10n.baseZone);
+    if (p == null) return;
+    final label = await CatalogRepo.instance.label(p);
+    setState(() {
+      _base = p;
+      _baseLabel = label;
+    });
+  }
+
   Future<void> _save() async {
     final l = context.l10n;
-    if (!_form.currentState!.validate()) return;
-    if (_published && (_base == null || _categoryIds.isEmpty)) {
-      showInfo(context, l.errProfileIncomplete);
+    if (_name.text.trim().isEmpty) {
+      showInfo(context, l.nameRequired);
       return;
     }
     String? phone, whatsapp;
     if (_phone.text.trim().isNotEmpty) {
       phone = normalizeGuineaPhone(_phone.text);
-      if (phone == null) { showInfo(context, l.phoneInvalid); return; }
+      if (phone == null) {
+        showInfo(context, l.phoneInvalid);
+        return;
+      }
     }
     if (_whatsapp.text.trim().isNotEmpty) {
       whatsapp = normalizeGuineaPhone(_whatsapp.text);
-      if (whatsapp == null) { showInfo(context, l.phoneInvalid); return; }
+      if (whatsapp == null) {
+        showInfo(context, l.phoneInvalid);
+        return;
+      }
     }
     for (final d in _hours.where((d) => d.enabled)) {
-      if (_hhmm(d.closes).compareTo(_hhmm(d.opens)) <= 0) { showInfo(context, l.hoursInvalid); return; }
+      if (_hhmm(d.closes).compareTo(_hhmm(d.opens)) <= 0) {
+        showInfo(context, l.hoursInvalid);
+        return;
+      }
     }
     setState(() => _saving = true);
     try {
@@ -266,7 +261,7 @@ class _EditProProfileScreenState extends State<EditProProfileScreen> {
           'location_id': _base?.id,
           'logo_path': _logoPath,
           'cover_path': _coverPath,
-          'is_published': _published,
+          'is_published': true, // publication automatique à l'enregistrement
         },
         contacts: {'phone': phone, 'whatsapp': whatsapp, 'show_phone': _showPhone, 'show_whatsapp': _showWhatsapp},
         categoryIds: _categoryIds,
@@ -282,7 +277,7 @@ class _EditProProfileScreenState extends State<EditProProfileScreen> {
       ];
       if (rows.isNotEmpty) await supa.from('opening_hours').insert(rows);
       if (!mounted) return;
-      showInfo(context, l.saved);
+      showInfo(context, l.profileSavedPublished);
       if (Navigator.of(context).canPop()) {
         context.pop();
       } else {
@@ -295,6 +290,30 @@ class _EditProProfileScreenState extends State<EditProProfileScreen> {
     }
   }
 
+  Widget _section(String title, List<Widget> children, {IconData? icon}) {
+    return FadeSlideIn(
+      child: BallalCard(
+        margin: const EdgeInsets.only(bottom: 14),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            if (icon != null) ...[
+              Container(
+                padding: const EdgeInsets.all(7),
+                decoration: BoxDecoration(color: BallalColors.primarySoft, borderRadius: BorderRadius.circular(10)),
+                child: Icon(icon, size: 18, color: BallalColors.primary),
+              ),
+              const SizedBox(width: 10),
+            ],
+            Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+          ]),
+          const SizedBox(height: 12),
+          ...children,
+        ]),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l = context.l10n;
@@ -304,51 +323,88 @@ class _EditProProfileScreenState extends State<EditProProfileScreen> {
     }
     final days = [l.dayMon, l.dayTue, l.dayWed, l.dayThu, l.dayFri, l.daySat, l.daySun];
     final catNames = _allCategories.where((c) => _categoryIds.contains(c.id)).toList();
-    Widget title(String t) => Padding(
-          padding: const EdgeInsets.only(top: 24, bottom: 8),
-          child: Text(t, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
-        );
 
     return Scaffold(
       appBar: AppBar(title: Text(l.myProProfile)),
-      body: Form(
-        key: _form,
-        child: ListView(padding: const EdgeInsets.fromLTRB(16, 8, 16, 32), children: [
-          // Photo / logo et couverture
-          SizedBox(
-            height: 150,
-            child: Stack(clipBehavior: Clip.none, children: [
+      body: ListView(padding: const EdgeInsets.fromLTRB(16, 4, 16, 110), children: [
+        // ─── Couverture + photo de profil ───
+        FadeSlideIn(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Stack(clipBehavior: Clip.none, children: [
               GestureDetector(
-                onTap: () => _pickImage(false),
-                child: Container(
-                  height: 120,
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(16),
-                    gradient: const LinearGradient(colors: [BallalColors.primary, BallalColors.primaryDark]),
+                onTap: _uploadingCover ? null : () => _pickImage(false),
+                child: AspectRatio(
+                  aspectRatio: 16 / 9, // toute image est recadrée automatiquement à ce format
+                  child: Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(kRadius),
+                      gradient: const LinearGradient(colors: [BallalColors.primary, BallalColors.primaryDark]),
+                    ),
+                    clipBehavior: Clip.antiAlias,
+                    child: Stack(fit: StackFit.expand, children: [
+                      if (_coverPath != null) CachedNetworkImage(imageUrl: proImageUrl(_coverPath)!, fit: BoxFit.cover),
+                      if (_coverPath == null)
+                        Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                          const Icon(Icons.add_photo_alternate_outlined, color: Colors.white, size: 36),
+                          const SizedBox(height: 6),
+                          Text(l.addCover, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
+                        ]),
+                      if (_uploadingCover) Container(color: Colors.black38, child: const Center(child: CircularProgressIndicator())),
+                      Positioned(
+                        right: 10,
+                        bottom: 10,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(20)),
+                          child: Row(mainAxisSize: MainAxisSize.min, children: [
+                            const Icon(Icons.edit, color: Colors.white, size: 14),
+                            const SizedBox(width: 4),
+                            Text(l.change, style: const TextStyle(color: Colors.white, fontSize: 12)),
+                          ]),
+                        ),
+                      ),
+                    ]),
                   ),
-                  clipBehavior: Clip.antiAlias,
-                  child: _coverPath != null
-                      ? CachedNetworkImage(imageUrl: proImageUrl(_coverPath)!, fit: BoxFit.cover)
-                      : Center(child: Text(l.addCover, style: const TextStyle(color: Colors.white))),
                 ),
               ),
               Positioned(
                 left: 16,
-                bottom: 0,
+                bottom: -36,
                 child: GestureDetector(
-                  onTap: () => _pickImage(true),
+                  onTap: _uploadingLogo ? null : () => _pickImage(true),
                   child: Container(
-                    decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: Colors.white, width: 3)),
-                    child: Avatar(url: proImageUrl(_logoPath), name: _name.text, size: 72),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 4),
+                      boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.12), blurRadius: 12)],
+                    ),
+                    child: Stack(children: [
+                      Avatar(url: proImageUrl(_logoPath), name: _name.text, size: 84),
+                      Positioned(
+                        right: 0,
+                        bottom: 0,
+                        child: Container(
+                          padding: const EdgeInsets.all(5),
+                          decoration: const BoxDecoration(color: BallalColors.accent, shape: BoxShape.circle),
+                          child: _uploadingLogo
+                              ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                              : const Icon(Icons.photo_camera, color: Colors.white, size: 14),
+                        ),
+                      ),
+                    ]),
                   ),
                 ),
               ),
             ]),
-          ),
-          Text(l.tapToChangePhotos, style: const TextStyle(fontSize: 12, color: BallalColors.muted)),
-          title(l.identity),
+            const SizedBox(height: 44),
+            Text(l.coverHint, style: const TextStyle(fontSize: 12, color: BallalColors.muted)),
+            const SizedBox(height: 16),
+          ]),
+        ),
+
+        _section(l.identity, icon: Icons.badge_outlined, [
           SegmentedButton<String>(
+            showSelectedIcon: false,
             segments: [
               ButtonSegment(value: 'independent', label: Text(l.typeIndependent), icon: const Icon(Icons.person_outline)),
               ButtonSegment(value: 'company', label: Text(l.typeCompany), icon: const Icon(Icons.business_outlined)),
@@ -356,76 +412,100 @@ class _EditProProfileScreenState extends State<EditProProfileScreen> {
             selected: {_proType},
             onSelectionChanged: (s) => setState(() => _proType = s.first),
           ),
-          const SizedBox(height: 12),
-          TextFormField(
+          const SizedBox(height: 14),
+          FieldLabel(l.proDisplayName),
+          TextField(
             controller: _name,
             maxLength: 120,
-            decoration: InputDecoration(labelText: l.proDisplayName),
-            validator: (v) => (v ?? '').trim().length < 2 ? l.required : null,
+            buildCounter: noCounter,
+            textCapitalization: TextCapitalization.words,
+            onChanged: (_) => setState(() {}),
+            decoration: InputDecoration(hintText: l.proDisplayNameHint, prefixIcon: const Icon(Icons.storefront_outlined)),
           ),
-          TextFormField(
+          const SizedBox(height: 12),
+          FieldLabel(l.mainTrade),
+          TextField(
             controller: _headline,
-            maxLength: 120,
-            decoration: InputDecoration(labelText: l.mainTrade, hintText: l.mainTradeHint),
-            validator: (v) => (v ?? '').trim().length < 2 ? l.required : null,
+            maxLength: 200,
+            buildCounter: noCounter,
+            textCapitalization: TextCapitalization.sentences,
+            decoration: InputDecoration(hintText: l.mainTradeHint, prefixIcon: const Icon(Icons.work_outline)),
           ),
-          TextFormField(
+          const SizedBox(height: 12),
+          FieldLabel(l.description),
+          TextField(
             controller: _description,
-            maxLines: 5,
+            minLines: 3,
+            maxLines: 8,
             maxLength: 3000,
-            decoration: InputDecoration(labelText: l.description, hintText: l.proDescriptionHint, alignLabelWithHint: true),
+            buildCounter: noCounter,
+            textCapitalization: TextCapitalization.sentences,
+            decoration: InputDecoration(hintText: l.proDescriptionHint),
           ),
+          const SizedBox(height: 12),
           Row(children: [
             Expanded(
-              child: TextFormField(
-                controller: _experience,
-                keyboardType: TextInputType.number,
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(2)],
-                decoration: InputDecoration(labelText: l.experienceYears),
-              ),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                FieldLabel(l.experienceYears),
+                TextField(
+                  controller: _experience,
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(2)],
+                  decoration: const InputDecoration(hintText: '5', prefixIcon: Icon(Icons.timeline)),
+                ),
+              ]),
             ),
           ]),
           const SizedBox(height: 12),
-          TextFormField(controller: _skills, decoration: InputDecoration(labelText: l.skills, hintText: l.skillsHint)),
-          title(l.tradesAndCategories),
+          FieldLabel(l.skills),
+          TextField(
+            controller: _skills,
+            decoration: InputDecoration(hintText: l.skillsHint, prefixIcon: const Icon(Icons.bolt_outlined)),
+          ),
+        ]),
+
+        _section(l.tradesAndCategories, icon: Icons.category_outlined, [
+          if (catNames.isEmpty)
+            Text(l.noTradeYet, style: const TextStyle(color: BallalColors.muted))
+          else
+            Wrap(spacing: 8, runSpacing: 8, children: [
+              for (final c in catNames)
+                ChoiceChip(
+                  label: Text(c.name),
+                  selected: c.id == _primaryCategory,
+                  avatar: c.id == _primaryCategory ? const Icon(Icons.star_rounded, size: 16, color: BallalColors.accent) : null,
+                  showCheckmark: false,
+                  onSelected: (_) => setState(() => _primaryCategory = c.id),
+                ),
+            ]),
+          if (catNames.length > 1) ...[
+            const SizedBox(height: 6),
+            Text(l.tapToSetPrimary, style: const TextStyle(fontSize: 12, color: BallalColors.muted)),
+          ],
+          const SizedBox(height: 10),
           OutlinedButton.icon(
             onPressed: _chooseCategories,
-            icon: const Icon(Icons.category_outlined),
-            label: Text(catNames.isEmpty ? l.chooseTrades : l.tradesSelected(catNames.length.toString())),
+            icon: const Icon(Icons.add),
+            label: Text(catNames.isEmpty ? l.chooseTrades : l.editTrades),
           ),
-          Wrap(spacing: 6, children: [
-            for (final c in catNames)
-              ChoiceChip(
-                label: Text(c.name),
-                selected: c.id == _primaryCategory,
-                tooltip: l.primaryTrade,
-                onSelected: (_) => setState(() => _primaryCategory = c.id),
-              ),
-          ]),
-          title(l.languages),
-          Wrap(spacing: 6, children: [
-            for (final e in const {'fr': 'Français', 'ff': 'Pular', 'sus': 'Soussou', 'man': 'Malinké', 'en': 'English'}.entries)
-              FilterChip(
-                label: Text(e.value),
-                selected: _languages.contains(e.key),
-                onSelected: (v) => setState(() => v ? _languages.add(e.key) : _languages.remove(e.key)),
-              ),
-          ]),
-          title(l.serviceZones),
-          ListTile(
-            tileColor: Colors.white,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-            leading: const Icon(Icons.home_work_outlined, color: BallalColors.primary),
-            title: Text(_base?.name ?? l.baseZone),
-            subtitle: Text(l.baseZoneHint),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () async {
-              final p = await pickPlace(context, title: l.baseZone);
-              if (p != null) setState(() => _base = p);
-            },
+        ]),
+
+        _section(l.serviceZones, icon: Icons.place_outlined, [
+          FieldLabel(l.baseZone),
+          InkWell(
+            borderRadius: BorderRadius.circular(16),
+            onTap: _chooseBase,
+            child: InputDecorator(
+              decoration: const InputDecoration(prefixIcon: Icon(Icons.home_work_outlined), suffixIcon: Icon(Icons.chevron_right)),
+              child: Text(_baseLabel ?? l.chooseZone,
+                  style: TextStyle(color: _baseLabel == null ? const Color(0xFF94A3B8) : BallalColors.text)),
+            ),
           ),
-          const SizedBox(height: 8),
-          Wrap(spacing: 6, runSpacing: 6, children: [
+          const SizedBox(height: 6),
+          Text(l.baseZoneHint, style: const TextStyle(fontSize: 12, color: BallalColors.muted)),
+          const SizedBox(height: 12),
+          FieldLabel(l.otherZones),
+          Wrap(spacing: 8, runSpacing: 8, children: [
             for (final a in _areas.values) InputChip(label: Text(a.name), onDeleted: () => setState(() => _areas.remove(a.id))),
             ActionChip(
               avatar: const Icon(Icons.add, size: 18),
@@ -436,50 +516,121 @@ class _EditProProfileScreenState extends State<EditProProfileScreen> {
               },
             ),
           ]),
-          title(l.openingHours),
+        ]),
+
+        _section(l.portfolio, icon: Icons.photo_library_outlined, [
+          Text(l.portfolioHint, style: const TextStyle(fontSize: 12, color: BallalColors.muted)),
+          const SizedBox(height: 10),
+          GridView.count(
+            crossAxisCount: 3,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            mainAxisSpacing: 8,
+            crossAxisSpacing: 8,
+            children: [
+              for (final item in _portfolio)
+                Stack(fit: StackFit.expand, children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: CachedNetworkImage(imageUrl: proImageUrl(item['storage_path'] as String)!, fit: BoxFit.cover),
+                  ),
+                  Positioned(
+                    right: 2,
+                    top: 2,
+                    child: IconButton(
+                      tooltip: l.remove,
+                      visualDensity: VisualDensity.compact,
+                      style: IconButton.styleFrom(backgroundColor: Colors.black54, foregroundColor: Colors.white),
+                      icon: const Icon(Icons.close, size: 16),
+                      onPressed: () => _removePortfolio(item),
+                    ),
+                  ),
+                ]),
+              for (var i = 0; i < _portfolioUploading; i++)
+                Container(
+                  decoration: BoxDecoration(color: BallalColors.field, borderRadius: BorderRadius.circular(12)),
+                  child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                ),
+              if (_portfolio.length < 30)
+                InkWell(
+                  onTap: _portfolioUploading > 0 ? null : _addPortfolio,
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: BallalColors.primarySoft,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: BallalColors.primary.withValues(alpha: 0.3)),
+                    ),
+                    child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                      const Icon(Icons.add_photo_alternate_outlined, color: BallalColors.primary),
+                      const SizedBox(height: 4),
+                      Text(l.addPhotos, textAlign: TextAlign.center,
+                          style: const TextStyle(fontSize: 11, color: BallalColors.primary, fontWeight: FontWeight.w700)),
+                    ]),
+                  ),
+                ),
+            ],
+          ),
+        ]),
+
+        _section(l.openingHours, icon: Icons.schedule_outlined, [
           for (var i = 0; i < 7; i++)
-            Row(children: [
-              SizedBox(
-                width: 110,
-                child: CheckboxListTile(
-                  contentPadding: EdgeInsets.zero,
-                  dense: true,
-                  controlAffinity: ListTileControlAffinity.leading,
-                  title: Text(days[i]),
-                  value: _hours[i].enabled,
-                  onChanged: (v) => setState(() => _hours[i].enabled = v ?? false),
-                ),
-              ),
-              if (_hours[i].enabled) ...[
-                TextButton(
-                  onPressed: () async {
-                    final t = await showTimePicker(context: context, initialTime: _hours[i].opens);
-                    if (t != null) setState(() => _hours[i].opens = t);
-                  },
-                  child: Text(_hhmm(_hours[i].opens)),
-                ),
-                const Text('–'),
-                TextButton(
-                  onPressed: () async {
-                    final t = await showTimePicker(context: context, initialTime: _hours[i].closes);
-                    if (t != null) setState(() => _hours[i].closes = t);
-                  },
-                  child: Text(_hhmm(_hours[i].closes)),
-                ),
-              ] else
-                Text(l.closed, style: const TextStyle(color: BallalColors.muted)),
-            ]),
-          title(l.indicativePrices),
-          TextFormField(
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 2),
+              child: Row(children: [
+                Switch(value: _hours[i].enabled, onChanged: (v) => setState(() => _hours[i].enabled = v)),
+                const SizedBox(width: 6),
+                SizedBox(width: 82, child: Text(days[i], style: const TextStyle(fontWeight: FontWeight.w600))),
+                if (_hours[i].enabled) ...[
+                  _TimeChip(
+                    value: _hhmm(_hours[i].opens),
+                    onTap: () async {
+                      final t = await showTimePicker(context: context, initialTime: _hours[i].opens);
+                      if (t != null) setState(() => _hours[i].opens = t);
+                    },
+                  ),
+                  const Padding(padding: EdgeInsets.symmetric(horizontal: 6), child: Text('–')),
+                  _TimeChip(
+                    value: _hhmm(_hours[i].closes),
+                    onTap: () async {
+                      final t = await showTimePicker(context: context, initialTime: _hours[i].closes);
+                      if (t != null) setState(() => _hours[i].closes = t);
+                    },
+                  ),
+                ] else
+                  Text(l.closed, style: const TextStyle(color: BallalColors.muted)),
+              ]),
+            ),
+        ]),
+
+        _section(l.indicativePrices, icon: Icons.payments_outlined, [
+          TextField(
             controller: _priceHint,
             maxLength: 120,
-            decoration: InputDecoration(hintText: l.priceHintExample, helperText: l.indicativeOnly),
+            buildCounter: noCounter,
+            decoration: InputDecoration(hintText: l.priceHintExample),
           ),
-          title(l.contacts),
-          TextFormField(
+          const SizedBox(height: 6),
+          Text(l.indicativeOnly, style: const TextStyle(fontSize: 12, color: BallalColors.muted)),
+        ]),
+
+        _section(l.languages, icon: Icons.translate_rounded, [
+          Wrap(spacing: 8, runSpacing: 8, children: [
+            for (final e in const {'fr': 'Français', 'ff': 'Pular', 'sus': 'Soussou', 'man': 'Malinké', 'en': 'English'}.entries)
+              FilterChip(
+                label: Text(e.value),
+                selected: _languages.contains(e.key),
+                onSelected: (v) => setState(() => v ? _languages.add(e.key) : _languages.remove(e.key)),
+              ),
+          ]),
+        ]),
+
+        _section(l.contacts, icon: Icons.call_outlined, [
+          FieldLabel(l.phoneLabel),
+          TextField(
             controller: _phone,
             keyboardType: TextInputType.phone,
-            decoration: InputDecoration(labelText: l.phoneLabel, prefixIcon: const Icon(Icons.call_outlined)),
+            decoration: const InputDecoration(hintText: '620 00 00 00', prefixIcon: Icon(Icons.call_outlined)),
           ),
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
@@ -487,10 +638,11 @@ class _EditProProfileScreenState extends State<EditProProfileScreen> {
             value: _showPhone,
             onChanged: (v) => setState(() => _showPhone = v),
           ),
-          TextFormField(
+          const FieldLabel('WhatsApp'),
+          TextField(
             controller: _whatsapp,
             keyboardType: TextInputType.phone,
-            decoration: const InputDecoration(labelText: 'WhatsApp', prefixIcon: Icon(Icons.chat_outlined)),
+            decoration: const InputDecoration(hintText: '620 00 00 00', prefixIcon: Icon(Icons.chat_outlined)),
           ),
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
@@ -499,64 +651,132 @@ class _EditProProfileScreenState extends State<EditProProfileScreen> {
             onChanged: (v) => setState(() => _showWhatsapp = v),
           ),
           Text(l.contactPrivacyHint, style: const TextStyle(fontSize: 12, color: BallalColors.muted)),
-          title(l.portfolio),
-          Wrap(spacing: 8, runSpacing: 8, children: [
-            for (final item in _portfolio)
-              Stack(children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: CachedNetworkImage(
-                    imageUrl: proImageUrl(item['storage_path'] as String)!,
-                    width: 96,
-                    height: 96,
-                    fit: BoxFit.cover,
-                  ),
-                ),
-                Positioned(
-                  right: 0,
-                  top: 0,
-                  child: IconButton(
-                    tooltip: l.remove,
-                    visualDensity: VisualDensity.compact,
-                    style: IconButton.styleFrom(backgroundColor: Colors.black54, foregroundColor: Colors.white),
-                    icon: const Icon(Icons.close, size: 16),
-                    onPressed: () => _removePortfolio(item),
-                  ),
-                ),
-              ]),
-            if (_portfolio.length < 30)
-              InkWell(
-                onTap: _addPortfolio,
-                borderRadius: BorderRadius.circular(12),
-                child: Container(
-                  width: 96,
-                  height: 96,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: BallalColors.border),
-                  ),
-                  child: const Icon(Icons.add_photo_alternate_outlined, color: BallalColors.primary),
-                ),
-              ),
-          ]),
-          title(l.visibility),
-          SwitchListTile(
-            contentPadding: EdgeInsets.zero,
-            title: Text(l.publishProfile),
-            subtitle: Text(_published ? l.publishedHint : l.unpublishedHint),
-            value: _published,
-            onChanged: (v) => setState(() => _published = v),
-          ),
-          const SizedBox(height: 16),
-          FilledButton(
-            onPressed: _saving ? null : _save,
-            child: _saving
-                ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white))
-                : Text(l.save),
-          ),
         ]),
+      ]),
+      bottomNavigationBar: SafeArea(
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+          color: Colors.white,
+          child: SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: _saving ? null : _save,
+              icon: _saving
+                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white))
+                  : const Icon(Icons.check_rounded),
+              label: Text(l.saveAndPublish),
+            ),
+          ),
+        ),
       ),
+    );
+  }
+}
+
+class _TimeChip extends StatelessWidget {
+  const _TimeChip({required this.value, required this.onTap});
+  final String value;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(10),
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(color: BallalColors.field, borderRadius: BorderRadius.circular(10)),
+        child: Text(value, style: const TextStyle(fontWeight: FontWeight.w700)),
+      ),
+    );
+  }
+}
+
+/// Choix des métiers : recherche + pastilles par famille (5 maximum).
+class _TradesSheet extends StatefulWidget {
+  const _TradesSheet({required this.all, required this.initial});
+  final List<Category> all;
+  final Set<String> initial;
+
+  @override
+  State<_TradesSheet> createState() => _TradesSheetState();
+}
+
+class _TradesSheetState extends State<_TradesSheet> {
+  late final Set<String> _selected = {...widget.initial};
+  String _q = '';
+
+  @override
+  Widget build(BuildContext context) {
+    final l = context.l10n;
+    final families = widget.all.where((c) => c.isFamily).toList();
+    final query = _q.toLowerCase();
+    return DraggableScrollableSheet(
+      expand: false,
+      initialChildSize: 0.9,
+      maxChildSize: 0.95,
+      builder: (_, controller) => Column(children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+          child: Row(children: [
+            Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(l.chooseTrades, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
+                Text(l.tradesCount(_selected.length.toString()), style: const TextStyle(color: BallalColors.muted, fontSize: 13)),
+              ]),
+            ),
+            FilledButton(
+              style: FilledButton.styleFrom(minimumSize: const Size(96, 44)),
+              onPressed: () => Navigator.pop(context, _selected),
+              child: Text(l.validate),
+            ),
+          ]),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+          child: TextField(
+            onChanged: (v) => setState(() => _q = v.trim()),
+            decoration: InputDecoration(prefixIcon: const Icon(Icons.search_rounded), hintText: l.searchTrade),
+          ),
+        ),
+        Expanded(
+          child: ListView(controller: controller, padding: const EdgeInsets.fromLTRB(16, 4, 16, 24), children: [
+            for (final f in families)
+              Builder(builder: (context) {
+                final trades = widget.all
+                    .where((c) => c.parentId == f.id && (query.isEmpty || c.name.toLowerCase().contains(query) ||
+                        f.name.toLowerCase().contains(query)))
+                    .toList();
+                if (trades.isEmpty) return const SizedBox.shrink();
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 14),
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Row(children: [
+                      Icon(categoryIcon(f.icon), size: 18, color: BallalColors.accent),
+                      const SizedBox(width: 6),
+                      Text(f.name, style: const TextStyle(fontWeight: FontWeight.w800, color: BallalColors.primaryDark)),
+                    ]),
+                    const SizedBox(height: 8),
+                    Wrap(spacing: 8, runSpacing: 8, children: [
+                      for (final t in trades)
+                        FilterChip(
+                          label: Text(t.name),
+                          selected: _selected.contains(t.id),
+                          onSelected: (v) {
+                            if (v && _selected.length >= 5) {
+                              showInfo(context, l.maxTrades);
+                              return;
+                            }
+                            setState(() => v ? _selected.add(t.id) : _selected.remove(t.id));
+                          },
+                        ),
+                    ]),
+                  ]),
+                );
+              }),
+          ]),
+        ),
+      ]),
     );
   }
 }

@@ -7,10 +7,36 @@ import '../../core/theme.dart';
 import '../../core/unread.dart';
 import '../../widgets/common.dart';
 
-/// Barre de navigation : Accueil · Recherche · (+) · Messages · Profil.
-class MainShell extends StatelessWidget {
+/// Barre de navigation : Accueil · Recherche · (+) · Messages · Profil, avec transitions animées.
+class MainShell extends StatefulWidget {
   const MainShell({super.key, required this.shell});
   final StatefulNavigationShell shell;
+
+  @override
+  State<MainShell> createState() => _MainShellState();
+}
+
+class _MainShellState extends State<MainShell> with SingleTickerProviderStateMixin {
+  late final AnimationController _fade =
+      AnimationController(vsync: this, duration: const Duration(milliseconds: 260), value: 1);
+  int _last = 0;
+
+  StatefulNavigationShell get shell => widget.shell;
+
+  @override
+  void didUpdateWidget(covariant MainShell old) {
+    super.didUpdateWidget(old);
+    if (shell.currentIndex != _last) {
+      _last = shell.currentIndex;
+      _fade.forward(from: 0);
+    }
+  }
+
+  @override
+  void dispose() {
+    _fade.dispose();
+    super.dispose();
+  }
 
   void _go(int branch) => shell.goBranch(branch, initialLocation: branch == shell.currentIndex);
 
@@ -29,7 +55,14 @@ class MainShell extends StatelessWidget {
   Widget build(BuildContext context) {
     final l = context.l10n;
     return Scaffold(
-      body: shell,
+      body: FadeTransition(
+        opacity: CurvedAnimation(parent: _fade, curve: Curves.easeOut),
+        child: SlideTransition(
+          position: Tween(begin: const Offset(0, 0.015), end: Offset.zero)
+              .animate(CurvedAnimation(parent: _fade, curve: Curves.easeOutCubic)),
+          child: shell,
+        ),
+      ),
       bottomNavigationBar: ListenableBuilder(
         listenable: Listenable.merge([Unread.instance, Session.instance]),
         builder: (context, _) => Container(
@@ -49,15 +82,15 @@ class MainShell extends StatelessWidget {
                     child: Semantics(
                       button: true,
                       label: Session.instance.isProMode ? l.addService : l.newRequest,
-                      child: InkWell(
-                        customBorder: const CircleBorder(),
+                      child: _Pressable(
                         onTap: () => _plus(context),
                         child: Container(
                           width: 48,
                           height: 48,
-                          decoration: const BoxDecoration(
+                          decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            gradient: LinearGradient(colors: [BallalColors.primary, BallalColors.primaryDark]),
+                            gradient: const LinearGradient(colors: [BallalColors.accent, Color(0xFFFF5A00)]),
+                            boxShadow: [BoxShadow(color: BallalColors.accent.withValues(alpha: 0.35), blurRadius: 12, offset: const Offset(0, 4))],
                           ),
                           child: const Icon(Icons.add_rounded, color: Colors.white, size: 28),
                         ),
@@ -94,22 +127,65 @@ class _NavItem extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = selected ? BallalColors.primary : BallalColors.muted;
     return Expanded(
-      child: InkWell(
+      child: _Pressable(
         onTap: onTap,
         child: Semantics(
           selected: selected,
           label: label,
           child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-            Badge(
-              isLabelVisible: badge > 0,
-              label: Text(badge > 99 ? '99+' : '$badge'),
-              child: Icon(icon, color: color),
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 220),
+              curve: Curves.easeOutCubic,
+              padding: EdgeInsets.symmetric(horizontal: selected ? 18 : 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: selected ? BallalColors.primarySoft : Colors.transparent,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: AnimatedScale(
+                scale: selected ? 1.12 : 1,
+                duration: const Duration(milliseconds: 220),
+                child: Badge(
+                  isLabelVisible: badge > 0,
+                  label: Text(badge > 99 ? '99+' : '$badge'),
+                  child: Icon(icon, color: color),
+                ),
+              ),
             ),
             const SizedBox(height: 2),
-            Text(label, style: TextStyle(fontSize: 11, color: color, fontWeight: selected ? FontWeight.w700 : FontWeight.w500)),
+            AnimatedDefaultTextStyle(
+              duration: const Duration(milliseconds: 200),
+              style: TextStyle(fontSize: 11, color: color, fontWeight: selected ? FontWeight.w800 : FontWeight.w500),
+              child: Text(label),
+            ),
           ]),
         ),
       ),
+    );
+  }
+}
+
+/// Zone tactile qui rétrécit légèrement quand on appuie.
+class _Pressable extends StatefulWidget {
+  const _Pressable({required this.child, required this.onTap});
+  final Widget child;
+  final VoidCallback onTap;
+
+  @override
+  State<_Pressable> createState() => _PressableState();
+}
+
+class _PressableState extends State<_Pressable> {
+  bool _down = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTapDown: (_) => setState(() => _down = true),
+      onTapCancel: () => setState(() => _down = false),
+      onTapUp: (_) => setState(() => _down = false),
+      onTap: widget.onTap,
+      child: AnimatedScale(scale: _down ? 0.88 : 1, duration: const Duration(milliseconds: 110), child: widget.child),
     );
   }
 }

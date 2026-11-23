@@ -182,6 +182,7 @@ class _SignedInState extends State<_SignedIn> {
         ),
         const SizedBox(height: 12),
         if (s.hasProRole) ...[
+          item(Icons.dashboard_customize_outlined, l.proSpace, () => context.push('/pro-dashboard')),
           item(Icons.storefront_outlined, l.myProProfile, () => context.push('/pro-edit')),
           item(Icons.design_services_outlined, l.myServices, () => context.push('/my-services')),
           if (s.isProMode) item(Icons.visibility_outlined, l.seePublicProfile, () => context.push('/pro/${currentUserId!}')),

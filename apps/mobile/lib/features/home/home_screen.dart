@@ -11,36 +11,26 @@ import '../../data/models.dart';
 import '../../data/repositories.dart';
 import '../../widgets/common.dart';
 
+/// Accueil unique (client ou pro) : tous les professionnels publiés, comme sur la maquette.
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return ListenableBuilder(
-      listenable: Session.instance,
-      builder: (_, __) => Session.instance.isProMode ? const ProDashboard() : const ClientHome(),
-    );
-  }
+  Widget build(BuildContext context) => const ClientHome();
 }
 
-class _Bell extends StatelessWidget {
-  const _Bell();
+/// Icône engrenage en haut à droite → Paramètres.
+class _Gear extends StatelessWidget {
+  const _Gear();
 
   @override
   Widget build(BuildContext context) {
-    return ListenableBuilder(
-      listenable: Unread.instance,
-      builder: (context, _) => IconButton(
-        tooltip: context.l10n.notifications,
-        onPressed: () {
-          if (requireAuth(context)) context.push('/notifications');
-        },
-        icon: Badge(
-          isLabelVisible: Unread.instance.notifications > 0,
-          label: Text('${Unread.instance.notifications}'),
-          child: const Icon(Icons.notifications_none_rounded, size: 28),
-        ),
-      ),
+    return IconButton(
+      tooltip: context.l10n.settings,
+      onPressed: () {
+        if (requireAuth(context)) context.push('/settings');
+      },
+      icon: const Icon(Icons.settings_outlined, size: 26),
     );
   }
 }
@@ -58,6 +48,10 @@ class _ClientHomeState extends State<ClientHome> {
   late Future<List<Category>> _families;
   late Future<List<ProCard>> _reco;
   Future<List<ServiceRequest>>? _recent;
+  final List<ProCard> _feed = [];
+  bool _feedLoading = false;
+  bool _feedHasMore = true;
+  Object? _feedError;
 
   @override
   void initState() {
@@ -65,6 +59,32 @@ class _ClientHomeState extends State<ClientHome> {
     _families = CatalogRepo.instance.families();
     _reco = Future.value(const []);
     _restoreZone();
+    _loadFeed(reset: true);
+  }
+
+  /// Tous les professionnels publiés, toutes zones confondues, par pages.
+  Future<void> _loadFeed({bool reset = false}) async {
+    if (_feedLoading) return;
+    setState(() {
+      _feedLoading = true;
+      _feedError = null;
+      if (reset) {
+        _feed.clear();
+        _feedHasMore = true;
+      }
+    });
+    try {
+      final page = await ProRepo.instance.search(SearchFilters(sort: 'rating'), offset: _feed.length);
+      if (!mounted) return;
+      setState(() {
+        _feed.addAll(page.where((p) => !_feed.any((x) => x.id == p.id)));
+        _feedHasMore = page.length >= ProRepo.pageSize;
+      });
+    } catch (e) {
+      if (mounted) setState(() => _feedError = e);
+    } finally {
+      if (mounted) setState(() => _feedLoading = false);
+    }
   }
 
   Future<void> _restoreZone() async {
@@ -106,14 +126,43 @@ class _ClientHomeState extends State<ClientHome> {
     return Scaffold(
       body: SafeArea(
         child: RefreshIndicator(
-          onRefresh: () async => _reload(),
+          onRefresh: () async {
+            _reload();
+            await _loadFeed(reset: true);
+          },
           child: ListView(padding: const EdgeInsets.only(bottom: 24), children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 12, 8, 0),
-              child: Row(children: [const BallalLogo(), const Spacer(), const _Bell()]),
+              child: Row(children: [const BallalLogo(), const Spacer(), const _Bell(), const _Gear()]),
+            ),
+            ListenableBuilder(
+              listenable: Session.instance,
+              builder: (context, _) => !(Session.instance.isSignedIn && Session.instance.hasProRole)
+                  ? const SizedBox.shrink()
+                  : FadeSlideIn(
+                child: BallalCard(
+                  margin: const EdgeInsets.fromLTRB(16, 10, 16, 4),
+                  onTap: () => context.push('/pro-dashboard'),
+                  child: Row(children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(color: BallalColors.accentSoft, borderRadius: BorderRadius.circular(12)),
+                      child: const Icon(Icons.dashboard_customize_outlined, color: BallalColors.accent),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Text(l.proSpace, style: const TextStyle(fontWeight: FontWeight.w800)),
+                        Text(l.proSpaceHint, style: const TextStyle(fontSize: 12, color: BallalColors.muted)),
+                      ]),
+                    ),
+                    const Icon(Icons.chevron_right),
+                  ]),
+                ),
+              ),
             ),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+              padding: const EdgeInsets.fromLTRB(16, 6, 16, 0),
               child: Align(
                 alignment: Alignment.centerLeft,
                 child: ActionChip(
@@ -178,7 +227,7 @@ class _ClientHomeState extends State<ClientHome> {
             ),
             SectionHeader(title: l.recommendedForYou, action: l.seeAll, onAction: () => context.go('/search')),
             SizedBox(
-              height: 150,
+              height: 236,
               child: FutureBuilder<List<ProCard>>(
                 future: _reco,
                 builder: (context, snap) {
@@ -194,12 +243,15 @@ class _ClientHomeState extends State<ClientHome> {
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     itemCount: items.length,
                     separatorBuilder: (_, __) => const SizedBox(width: 12),
-                    itemBuilder: (_, i) => ProRecoCard(
-                      pro: items[i],
-                      onTap: () {
-                        ProRepo.instance.logRecoEvent(items[i].id, 'click', position: i);
-                        context.push('/pro/${items[i].id}');
-                      },
+                    itemBuilder: (_, i) => FadeSlideIn(
+                      index: i,
+                      child: ProRecoCard(
+                        pro: items[i],
+                        onTap: () {
+                          ProRepo.instance.logRecoEvent(items[i].id, 'click', position: i);
+                          context.push('/pro/${items[i].id}');
+                        },
+                      ),
                     ),
                   );
                 },
@@ -230,6 +282,26 @@ class _ClientHomeState extends State<ClientHome> {
                       ),
                   ]);
                 },
+              ),
+            SectionHeader(title: l.allProfessionals),
+            if (_feedError != null && _feed.isEmpty)
+              ErrorState(error: _feedError!, onRetry: () => _loadFeed(reset: true))
+            else if (_feed.isEmpty && _feedLoading)
+              const SizedBox(height: 120, child: LoadingView())
+            else if (_feed.isEmpty)
+              Padding(
+                padding: const EdgeInsets.all(24),
+                child: Text(l.noProYet, textAlign: TextAlign.center, style: const TextStyle(color: BallalColors.muted)),
+              ),
+            for (var i = 0; i < _feed.length; i++) FadeSlideIn(index: i % 10, child: ProListTile(pro: _feed[i])),
+            if (_feedHasMore && _feed.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Center(
+                  child: _feedLoading
+                      ? const CircularProgressIndicator()
+                      : OutlinedButton(onPressed: _loadFeed, child: Text(l.loadMore)),
+                ),
               ),
           ]),
         ),
@@ -327,6 +399,7 @@ class _CategoryTile extends StatelessWidget {
 // ═════════════ Tableau de bord professionnel ═════════════
 class ProDashboard extends StatefulWidget {
   const ProDashboard({super.key});
+  static const route = '/pro-dashboard';
 
   @override
   State<ProDashboard> createState() => _ProDashboardState();
@@ -361,6 +434,7 @@ class _ProDashboardState extends State<ProDashboard> {
   Widget build(BuildContext context) {
     final l = context.l10n;
     return Scaffold(
+      appBar: AppBar(title: Text(l.proSpace)),
       body: SafeArea(
         child: FutureBuilder(
           future: _future,
@@ -376,11 +450,7 @@ class _ProDashboardState extends State<ProDashboard> {
               onRefresh: () async => setState(() => _future = _load()),
               child: ListView(padding: const EdgeInsets.only(bottom: 24), children: [
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 12, 8, 0),
-                  child: Row(children: [const BallalLogo(), const Spacer(), const _Bell()]),
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+                  padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
                   child: Text(l.helloName((profile?['display_name'] as String?) ?? ''),
                       style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
                 ),

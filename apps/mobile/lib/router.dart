@@ -23,7 +23,7 @@ import 'features/shell/main_shell.dart';
 
 const _authRoutes = {'/welcome', '/login', '/otp'};
 const _guestBlocked = [
-  '/requests', '/request/', '/chat', '/favorites', '/notifications', '/settings', '/pro-edit', '/my-services',
+  '/requests', '/request/', '/chat', '/favorites', '/notifications', '/settings', '/pro-edit', '/pro-dashboard', '/my-services',
 ];
 
 String? _redirect(BuildContext context, GoRouterState state) {
@@ -93,6 +93,7 @@ GoRouter buildRouter() {
       GoRoute(path: '/favorites', builder: (_, __) => const FavoritesScreen()),
       GoRoute(path: '/notifications', builder: (_, __) => const NotificationsScreen()),
       GoRoute(path: '/settings', builder: (_, __) => const SettingsScreen()),
+      GoRoute(path: '/pro-dashboard', builder: (_, __) => const ProDashboard()),
       GoRoute(path: '/pro-edit', builder: (_, __) => const EditProProfileScreen()),
       GoRoute(path: '/my-services', builder: (_, __) => const MyServicesScreen()),
       GoRoute(path: '/my-services/edit', builder: (_, s) => ServiceFormScreen(service: s.extra as ProService?)),

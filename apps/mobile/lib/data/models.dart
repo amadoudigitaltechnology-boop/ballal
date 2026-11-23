@@ -107,6 +107,7 @@ class ProService {
     this.priceUnit,
     this.durationText,
     required this.status,
+    this.photos = const [],
   });
 
   final String id;
@@ -119,6 +120,7 @@ class ProService {
   final String? priceUnit;
   final String? durationText;
   final String status;
+  final List<String> photos; // chemins dans le bucket pro-media
 
   factory ProService.fromMap(Map<String, dynamic> m) => ProService(
         id: m['id'] as String,
@@ -131,6 +133,12 @@ class ProService {
         priceUnit: m['price_unit'] as String?,
         durationText: m['duration_text'] as String?,
         status: m['status'] as String,
+        photos: (((m['service_media'] as List?) ?? const [])
+                .map((e) => Map<String, dynamic>.from(e as Map))
+                .toList()
+              ..sort((a, b) => ((a['sort_order'] as num?) ?? 0).compareTo((b['sort_order'] as num?) ?? 0)))
+            .map((e) => e['storage_path'] as String)
+            .toList(),
       );
 }
 

@@ -46,7 +46,7 @@ reset role;
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000000000c', false);
 set role authenticated;
 select public.activate_role('professional');
-select pg_temp.expect_error($q$update public.professional_profiles set is_published = true where user_id = auth.uid()$q$, 'publier un profil incomplet');
+select pg_temp.expect_error($q$update public.professional_profiles set display_name = '', is_published = true where user_id = auth.uid()$q$, 'publier sans nom');
 update public.professional_profiles
    set display_name = 'Mamadou Services', headline = 'Plombier sanitaire',
        description = 'Installation sanitaire, réparation de fuites, chauffe-eau. Intervention rapide à Ratoma et Dixinn depuis 8 ans.',
@@ -221,6 +221,20 @@ select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000000000a
 set role authenticated;
 select pg_temp.expect_error(format($q$do $d$ begin for i in 1..40 loop insert into public.messages (conversation_id, sender_id, body) values (%L, auth.uid(), 'msg ' || i); end loop; end $d$$q$, :'conv'), 'limite de 30 messages par minute');
 reset role;
+
+-- ═══ Quartier ajouté à la main ═══
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000000000b', false);
+set role authenticated;
+select pg_temp.check((select user_added from public.add_location((select id from public.locations where slug = 'kagbelen'), '  Kagbélen   Centre ')), 'quartier ajouté manuellement');
+select pg_temp.check((select count(*) from public.locations where slug = 'kagbelen-centre') = 1, 'pas de doublon (accents/espaces)');
+select pg_temp.check((select id from public.add_location((select id from public.locations where slug = 'kagbelen'), 'Kagbelen centre')) = (select id from public.locations where slug = 'kagbelen-centre'), 'quartier existant réutilisé');
+select pg_temp.expect_error($q$select public.add_location((select id from public.locations where slug = 'kipe'), 'Sous-quartier')$q$, 'ajout sous un quartier refusé');
+reset role;
+select set_config('request.jwt.claim.sub', '', false);
+set role anon;
+select pg_temp.expect_error($q$select public.add_location((select id from public.locations where slug = 'kagbelen'), 'X anonyme')$q$, 'ajout anonyme refusé');
+reset role;
+select pg_temp.check((select count(*) from public.locations where level = 'commune' and parent_id = (select id from public.locations where level='city' and slug='conakry')) = 13, '13 communes à Conakry');
 
 -- ═══ Statistiques pro ═══
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000000000b', false);

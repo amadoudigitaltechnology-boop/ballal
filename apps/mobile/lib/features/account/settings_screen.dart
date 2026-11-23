@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/session.dart';
 import '../../core/supa.dart';
 import '../../core/theme.dart';
 import '../../data/repositories.dart';
@@ -49,6 +50,31 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  Future<void> _editName() async {
+    final l = context.l10n;
+    final ctrl = TextEditingController(text: Session.instance.fullName ?? '');
+    final name = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l.myName),
+        content: TextField(controller: ctrl, autofocus: true, textCapitalization: TextCapitalization.words),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text(l.cancel)),
+          FilledButton(onPressed: () => Navigator.pop(ctx, ctrl.text.trim()), child: Text(l.save)),
+        ],
+      ),
+    );
+    ctrl.dispose();
+    if (name == null || name.length < 2) return;
+    try {
+      await AccountRepo.instance.updateName(name);
+      await Session.instance.refresh();
+      if (mounted) setState(() {});
+    } catch (e) {
+      if (mounted) showError(context, e);
+    }
+  }
+
   Future<void> _deleteAccount() async {
     final l = context.l10n;
     final ok = await showDialog<bool>(
@@ -85,6 +111,46 @@ class _SettingsScreenState extends State<SettingsScreen> {
           : p == null
               ? const LoadingView()
               : ListView(children: [
+                  _header(l.myAccount),
+                  ListTile(
+                    leading: const Icon(Icons.person_outline_rounded),
+                    title: Text(l.myName),
+                    subtitle: Text(Session.instance.fullName ?? ''),
+                    trailing: const Icon(Icons.edit_outlined, size: 20),
+                    onTap: _editName,
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.alternate_email_rounded),
+                    title: Text(l.loginEmail),
+                    subtitle: Text(Session.instance.user?.email ?? ''),
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.lock_outline_rounded),
+                    title: Text(l.password),
+                    subtitle: Text(l.noPasswordNeeded),
+                  ),
+                  if (Session.instance.hasProRole) ...[
+                    _header(l.proSpace),
+                    ListTile(
+                      leading: const Icon(Icons.storefront_outlined),
+                      title: Text(l.myProProfile),
+                      subtitle: Text(l.editProProfileHint),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () => context.push('/pro-edit'),
+                    ),
+                    ListTile(
+                      leading: const Icon(Icons.design_services_outlined),
+                      title: Text(l.myServices),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () => context.push('/my-services'),
+                    ),
+                    ListTile(
+                      leading: const Icon(Icons.dashboard_customize_outlined),
+                      title: Text(l.proSpace),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () => context.push('/pro-dashboard'),
+                    ),
+                  ],
                   _header(l.notifications),
                   SwitchListTile(
                     title: Text(l.prefMessages),

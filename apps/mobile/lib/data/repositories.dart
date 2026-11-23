@@ -43,6 +43,18 @@ class CatalogRepo {
   Future<List<Place>> children(String? parentId) async =>
       (await places()).where((p) => p.parentId == parentId).toList();
 
+  /// Ajoute un quartier (ou une commune) absent de la liste. Renvoie l'existant s'il y est déjà.
+  Future<Place> addLocation(String parentId, String name) async {
+    final row = await supa.rpc('add_location', params: {'p_parent': parentId, 'p_name': name});
+    final place = Place.fromMap(Map<String, dynamic>.from(row as Map));
+    final cache = _places;
+    if (cache != null && !cache.any((p) => p.id == place.id)) {
+      cache.add(place);
+      cache.sort((a, b) => a.name.compareTo(b.name));
+    }
+    return place;
+  }
+
   /// Libellé lisible « Kipé, Ratoma ».
   Future<String> label(Place p) async {
     final all = await places();
@@ -114,7 +126,7 @@ class ProRepo {
   }
 
   Future<List<ProService>> services(String proId, {bool onlyPublished = true}) async {
-    var q = supa.from('services').select().eq('professional_id', proId);
+    var q = supa.from('services').select('*, service_media(storage_path, sort_order)').eq('professional_id', proId);
     if (onlyPublished) q = q.eq('status', 'published');
     final data = await q.order('created_at');
     return _rows(data).map(ProService.fromMap).toList();
@@ -252,12 +264,29 @@ class ProRepo {
     await supa.from('professional_profiles').update({'availability': value}).eq('user_id', currentUserId!);
   }
 
-  Future<void> saveService(Map<String, dynamic> service, {String? id}) async {
+  /// Enregistre un service et ses photos (nouvelles photos ajoutées, photos retirées supprimées).
+  Future<void> saveService(Map<String, dynamic> service,
+      {String? id, List<Uint8List> newPhotos = const [], List<String> removedPhotos = const []}) async {
     final uid = currentUserId!;
+    String serviceId;
     if (id == null) {
-      await supa.from('services').insert({...service, 'professional_id': uid});
+      final row = await supa.from('services').insert({...service, 'professional_id': uid}).select('id').single();
+      serviceId = row['id'] as String;
     } else {
       await supa.from('services').update(service).eq('id', id).eq('professional_id', uid);
+      serviceId = id;
+    }
+    if (removedPhotos.isNotEmpty) {
+      await supa.from('service_media').delete().eq('service_id', serviceId).inFilter('storage_path', removedPhotos);
+      try {
+        await supa.storage.from('pro-media').remove(removedPhotos);
+      } catch (_) {}
+    }
+    var order = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+    for (final bytes in newPhotos) {
+      final path = '$uid/services/${_uuid.v4()}.jpg';
+      await supa.storage.from('pro-media').uploadBinary(path, bytes, fileOptions: const FileOptions(contentType: 'image/jpeg'));
+      await supa.from('service_media').insert({'service_id': serviceId, 'storage_path': path, 'sort_order': order++});
     }
   }
 
