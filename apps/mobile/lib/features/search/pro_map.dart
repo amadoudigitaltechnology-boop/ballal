@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart' hide Path;
@@ -200,7 +201,7 @@ class _Tail extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final path = Path()
+    final path = ui.Path()
       ..moveTo(0, 0)
       ..lineTo(size.width, 0)
       ..lineTo(size.width / 2, size.height)
