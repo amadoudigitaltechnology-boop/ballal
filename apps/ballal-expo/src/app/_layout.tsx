@@ -1,22 +1,28 @@
 import { useFonts } from 'expo-font';
-import { Stack, useRouter, useSegments } from 'expo-router';
+import { Stack, useRootNavigationState, useRouter, useSegments } from 'expo-router';
+import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
-import { ActivityIndicator, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-import { Logo } from '@/components/ui';
 import { SessionProvider, useSession } from '@/lib/session';
 import { C, fontAssets } from '@/lib/theme';
+
+// Garde l'écran de démarrage natif affiché pendant le chargement des polices.
+SplashScreen.preventAutoHideAsync();
+SplashScreen.setOptions({ duration: 400, fade: true });
 
 /** Garde de navigation : compte obligatoire, profil à compléter, sinon l'accueil. */
 function Guard() {
   const { ready, session, needsSetup, onboardingSeen, profile } = useSession();
   const segments = useSegments() as string[];
   const router = useRouter();
+  const nav = useRootNavigationState();
+  const navReady = !!nav?.key;
 
   useEffect(() => {
-    if (!ready) return;
+    // On attend que la navigation soit montée avant toute redirection.
+    if (!ready || !navReady) return;
     const group = segments[0];
     const inAuth = group === '(auth)';
     if (!session) {
@@ -30,7 +36,7 @@ function Guard() {
       return;
     }
     if (inAuth && segments[1] !== 'new-password') router.replace('/');
-  }, [ready, session, needsSetup, onboardingSeen, profile, segments, router]);
+  }, [ready, navReady, session, needsSetup, onboardingSeen, profile, segments, router]);
 
   return (
     <Stack
@@ -47,15 +53,12 @@ function Guard() {
 }
 
 export default function RootLayout() {
-  const [loaded] = useFonts(fontAssets);
-  if (!loaded) {
-    return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff' }}>
-        <Logo height={48} />
-        <ActivityIndicator color={C.primary} style={{ marginTop: 24 }} />
-      </View>
-    );
-  }
+  const [loaded, fontError] = useFonts(fontAssets);
+  const ok = loaded || !!fontError;
+  useEffect(() => {
+    if (ok) SplashScreen.hide();
+  }, [ok]);
+  if (!ok) return null;
   return (
     <SafeAreaProvider>
       <SessionProvider>
