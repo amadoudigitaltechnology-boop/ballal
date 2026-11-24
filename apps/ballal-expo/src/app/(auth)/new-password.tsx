@@ -1,0 +1,41 @@
+import { router } from 'expo-router';
+import { useState } from 'react';
+import { Alert, Text } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
+import { Button, FadeIn, Input, styles } from '@/components/ui';
+import { friendlyError, supabase } from '@/lib/supabase';
+
+export default function NewPassword() {
+  const [password, setPassword] = useState('');
+  const [confirm, setConfirm] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const save = async () => {
+    if (password.length < 8) return Alert.alert('Mot de passe', 'Au moins 8 caractères.');
+    if (password !== confirm) return Alert.alert('Mot de passe', 'Les deux mots de passe ne sont pas identiques.');
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.updateUser({ password });
+      if (error) throw error;
+      Alert.alert('BALLAL', 'Mot de passe enregistré ✅');
+      router.replace('/');
+    } catch (e) {
+      Alert.alert('BALLAL', friendlyError(e));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#fff', padding: 24 }}>
+      <FadeIn style={{ gap: 12, marginTop: 24 }}>
+        <Text style={[styles.h1, { fontSize: 26 }]}>Nouveau mot de passe</Text>
+        <Text style={styles.muted}>Choisissez un mot de passe d’au moins 8 caractères.</Text>
+        <Input icon="lock-closed-outline" placeholder="Mot de passe" value={password} onChangeText={setPassword} secure />
+        <Input icon="lock-open-outline" placeholder="Confirmer le mot de passe" value={confirm} onChangeText={setConfirm} secure />
+        <Button label="Enregistrer" onPress={save} loading={loading} />
+      </FadeIn>
+    </SafeAreaView>
+  );
+}

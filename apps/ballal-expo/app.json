@@ -1,0 +1,38 @@
+{
+  "expo": {
+    "name": "BALLAL",
+    "slug": "ballal",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "bundleIdentifier": "com.amadoutechnology.ballal",
+      "supportsTablet": false
+    },
+    "android": {
+      "package": "com.amadoutechnology.ballal",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/icon.png",
+        "backgroundColor": "#FFFFFF"
+      }
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-font",
+      "expo-image",
+      "expo-web-browser"
+    ],
+    "scheme": "ballal",
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "supabaseUrl": "https://lpoetkfxmaiqxoanhpum.supabase.co",
+      "supabaseAnonKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxwb2V0a2Z4bWFpcXhvYW5ocHVtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTUyOTgxNjUsImV4cCI6MjExMDg3NDE2NX0.tdSg4Pg6M2ALa4Pr_23hOfHVngIlwpQo62vZ1VROpO0"
+    }
+  }
+}
