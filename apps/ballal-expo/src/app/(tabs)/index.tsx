@@ -27,6 +27,7 @@ export default function Home() {
   const [pros, setPros] = useState<ProCard[] | null>(null);
   const [error, setError] = useState(false);
   const x = useState(() => new Animated.Value(0))[0];
+  const [areaH, setAreaH] = useState(0);
 
   useFocusEffect(
     useCallback(() => {
@@ -118,7 +119,7 @@ export default function Home() {
 
       {/* Carrousel des professionnels : prend toute la place restante */}
       <SectionTitle title="Professionnels" action="Voir tout" onAction={() => router.push('/search')} />
-      <View style={{ flex: 1, paddingBottom: 86 }}>
+      <View style={{ flex: 1, paddingBottom: 86 }} onLayout={(e) => setAreaH(e.nativeEvent.layout.height - 86)}>
         {pros === null ? (
           error ? (
             <Empty icon="cloud-offline-outline" title="Connexion impossible" text="Vérifiez votre connexion internet." />
@@ -144,9 +145,9 @@ export default function Home() {
               const pos = index * (CARD + GAP);
               const scale = x.interpolate({ inputRange: [pos - CARD, pos, pos + CARD], outputRange: [0.92, 1, 0.92], extrapolate: 'clamp' });
               return (
-                <Rise index={Math.min(index, 3)} style={{ flex: 1 }}>
-                  <Animated.View style={{ flex: 1, transform: [{ scale }] }}>
-                    <ProCardBig pro={item} width={CARD} />
+                <Rise index={Math.min(index, 3)}>
+                  <Animated.View style={{ transform: [{ scale }] }}>
+                    <ProCardBig pro={item} width={CARD} height={Math.max(areaH - 10, 180)} />
                   </Animated.View>
                 </Rise>
               );

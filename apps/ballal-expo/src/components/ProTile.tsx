@@ -74,15 +74,15 @@ export function ProTile({ pro, index = 0 }: { pro: ProCard; index?: number }) {
 }
 
 /** Grande carte verticale du carrousel d'accueil (photo en haut, infos en bas). */
-export function ProCardBig({ pro, width }: { pro: ProCard; width: number }) {
+export function ProCardBig({ pro, width, height }: { pro: ProCard; width: number; height: number }) {
   const [label, color] = availability[pro.availability] ?? availability.available;
   const url = publicUrl('pro-media', pro.logoPath);
   const initials = pro.displayName.trim().split(/\s+/).slice(0, 2).map((w) => w[0]?.toUpperCase() ?? '').join('') || '?';
   return (
-    <Card onPress={() => router.push(`/pro/${pro.id}`)} style={{ width, flex: 1, padding: 0, overflow: 'hidden' }}>
+    <Card onPress={() => router.push(`/pro/${pro.id}`)} style={{ width, height, padding: 0, overflow: 'hidden' }}>
       <View style={{ flex: 1, minHeight: 60 }}>
         {url ? (
-          <Image source={url} style={{ flex: 1 }} contentFit="cover" transition={250} />
+          <Image source={url} style={{ flex: 1 }} contentFit="cover" contentPosition="top" transition={250} />
         ) : (
           <LinearGradient colors={brandGradient} style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
             <Text style={{ color: '#fff', fontFamily: F.displayHeavy, fontSize: 38 }}>{initials}</Text>

@@ -11,8 +11,8 @@ const W = Dimensions.get('window').width;
 
 const slides = [
   { photos: ['business'] as const, title: 'Trouvez facilement des services près de vous', text: 'Rapide · Fiable · Proche de vous' },
-  { photos: ['plumber', 'builder'] as const, title: 'Des professionnels de confiance', text: 'Plombiers, électriciens, maçons… Comparez les avis et discutez directement dans BALLAL.' },
-  { photos: ['beauty', 'chef', 'doctor', 'delivery'] as const, title: 'Tous les métiers, près de chez vous', text: 'Beauté, cuisine, santé, livraison… Créez votre compte et trouvez le bon pro en quelques secondes.' },
+  { photos: ['builder', 'doctor'] as const, title: 'Des professionnels de confiance', text: 'Plombiers, électriciens, maçons… Comparez les avis et discutez directement dans BALLAL.' },
+  { photos: ['beauty', 'chef', 'delivery'] as const, title: 'Tous les métiers, près de chez vous', text: 'Beauté, cuisine, santé, livraison… Créez votre compte et trouvez le bon pro en quelques secondes.' },
 ];
 
 /** Écrans de présentation : personnages détourés sur l'arche dégradée (première version). Écran fixe, sans défilement vertical. */

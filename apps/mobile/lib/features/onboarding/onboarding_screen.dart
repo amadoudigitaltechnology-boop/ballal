@@ -118,8 +118,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     final l = context.l10n;
     final pages = [
       (const ['business'], l.onb1Title, l.onb1Tagline),
-      (const ['plumber', 'builder'], l.onb2Title, l.onb2Text),
-      (const ['beauty', 'chef', 'doctor', 'delivery'], l.onb3Title, l.onb3Text),
+      (const ['builder', 'doctor'], l.onb2Title, l.onb2Text),
+      (const ['beauty', 'chef', 'delivery'], l.onb3Title, l.onb3Text),
     ];
     final last = _page == pages.length - 1;
     return Scaffold(

@@ -53,7 +53,6 @@ export const shadow = {
 export const people = {
   woman_phone: require('../../assets/people/woman_phone.png'),
   business: require('../../assets/people/business.png'),
-  plumber: require('../../assets/people/plumber.png'),
   builder: require('../../assets/people/builder.png'),
   beauty: require('../../assets/people/beauty.png'),
   chef: require('../../assets/people/chef.png'),
