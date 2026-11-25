@@ -10,3 +10,5 @@ for f in migrations/*.sql; do echo "→ $f"; $P -f "$f"; done
 $P -f seed.sql
 echo "→ tests"
 $P -f tests/10_rls_and_api.sql
+echo "→ test d'intrusion"
+psql -U postgres -d $DB -v ON_ERROR_STOP=1 -q -f tests/20_pentest.sql

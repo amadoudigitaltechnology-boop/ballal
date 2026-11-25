@@ -1,5 +1,6 @@
 # Génère l'APK Android de BALLAL sur les serveurs GitHub (gratuit).
-# La configuration publique (URL + clé anon) est dans apps/mobile/env/dev.json.
+# La configuration (URL + clé anon) vient des secrets GitHub SUPABASE_URL et SUPABASE_ANON_KEY :
+# aucune clé n'est écrite dans le dépôt.
 name: Build APK
 
 on:
@@ -44,6 +45,12 @@ jobs:
             echo "Pas de clé configurée : signature de test"
           fi
 
+      - name: Configuration vérifiée (secrets GitHub)
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: python3 tool/write_env.py env/ci.json
+
       - name: Générer les dossiers Android
         run: |
           flutter create --org com.amadoutechnology --project-name ballal --platforms android .
@@ -59,8 +66,8 @@ jobs:
 
       - name: Construire l'APK et le fichier Play Store (AAB)
         run: |
-          flutter build apk --release --dart-define-from-file=env/dev.json --build-number=${{ github.run_number }}
-          flutter build appbundle --release --dart-define-from-file=env/dev.json --build-number=${{ github.run_number }}
+          flutter build apk --release --dart-define-from-file=env/ci.json --build-number=${{ github.run_number }}
+          flutter build appbundle --release --dart-define-from-file=env/ci.json --build-number=${{ github.run_number }}
 
       - uses: actions/upload-artifact@v4
         with:

@@ -39,7 +39,7 @@ class PushService {
       FirebaseMessaging.onBackgroundMessage(_onBackgroundMessage);
       _ready = true;
     } catch (e) {
-      debugPrint('Push désactivé : $e');
+      if (kDebugMode) debugPrint('Push désactivé : $e');
       return;
     }
     FirebaseMessaging.onMessage.listen(_onForeground);
@@ -84,7 +84,7 @@ class PushService {
       final token = await FirebaseMessaging.instance.getToken();
       if (token != null) await _register(token);
     } catch (e) {
-      debugPrint('Push : $e');
+      if (kDebugMode) debugPrint('Push : $e');
     }
   }
 
@@ -97,7 +97,7 @@ class PushService {
         'p_platform': Platform.isIOS ? 'ios' : 'android',
       });
     } catch (e) {
-      debugPrint('Push register : $e');
+      if (kDebugMode) debugPrint('Push register : $e');
     }
   }
 

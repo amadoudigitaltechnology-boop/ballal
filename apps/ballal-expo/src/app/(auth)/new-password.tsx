@@ -4,7 +4,7 @@ import { Alert, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button, FadeIn, Input, styles } from '@/components/ui';
-import { friendlyError, supabase } from '@/lib/supabase';
+import { friendlyError, strongPassword, supabase } from '@/lib/supabase';
 
 export default function NewPassword() {
   const [password, setPassword] = useState('');
@@ -12,7 +12,8 @@ export default function NewPassword() {
   const [loading, setLoading] = useState(false);
 
   const save = async () => {
-    if (password.length < 8) return Alert.alert('Mot de passe', 'Au moins 8 caractères.');
+    if (password.length < 8 || !strongPassword(password))
+      return Alert.alert('Mot de passe', '8 caractères minimum, avec au moins une lettre et un chiffre.');
     if (password !== confirm) return Alert.alert('Mot de passe', 'Les deux mots de passe ne sont pas identiques.');
     setLoading(true);
     try {

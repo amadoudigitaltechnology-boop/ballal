@@ -72,7 +72,7 @@ class Session extends ChangeNotifier {
       activeMode = (prefs?['active_mode'] as String?) ?? 'client';
       if (activeMode == 'professional' && !hasProRole) activeMode = 'client';
     } catch (e) {
-      debugPrint('Session.refresh: $e');
+      if (kDebugMode) debugPrint('Session.refresh: $e');
     }
     notifyListeners();
   }

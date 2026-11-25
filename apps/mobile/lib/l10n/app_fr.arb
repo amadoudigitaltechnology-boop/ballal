@@ -652,7 +652,7 @@
   "passwordLabel": "Mot de passe",
   "passwordHint": "8 caractères minimum",
   "confirmPassword": "Confirmer le mot de passe",
-  "passwordTooShort": "Le mot de passe doit contenir au moins 8 caractères.",
+  "passwordTooShort": "8 caractères minimum, avec au moins une lettre et un chiffre.",
   "passwordsDontMatch": "Les deux mots de passe ne sont pas identiques.",
   "wrongPassword": "E-mail ou mot de passe incorrect.",
   "emailAlreadyUsed": "Un compte existe déjà avec cet e-mail. Connectez-vous (ou « Mot de passe oublié ? »).",

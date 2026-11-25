@@ -15,7 +15,8 @@
       "adaptiveIcon": {
         "foregroundImage": "./assets/icon.png",
         "backgroundColor": "#FFFFFF"
-      }
+      },
+      "allowBackup": false
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -37,10 +38,6 @@
     "scheme": "ballal",
     "experiments": {
       "typedRoutes": true
-    },
-    "extra": {
-      "supabaseUrl": "https://lpoetkfxmaiqxoanhpum.supabase.co",
-      "supabaseAnonKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxwb2V0a2Z4bWFpcXhvYW5ocHVtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTUyOTgxNjUsImV4cCI6MjExMDg3NDE2NX0.tdSg4Pg6M2ALa4Pr_23hOfHVngIlwpQo62vZ1VROpO0"
     }
   }
 }

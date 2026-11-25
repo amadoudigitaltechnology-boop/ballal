@@ -28,7 +28,7 @@ supabase functions deploy delete-account
 ```
 
 Dans le tableau de bord Supabase :
-- **Authentication → Providers → Phone** : activer et brancher un fournisseur SMS (Twilio, Vonage, MessageBird…). Le coût des SMS vers +224 est à budgéter (voir `docs/ETAT_DU_PROJET.md`).
+- **Authentication → Providers → Phone** : activer et brancher un fournisseur SMS (Twilio, Vonage, MessageBird…). Le coût des SMS vers +224 est à budgéter (voir `notes/ETAT_DU_PROJET.md`).
 - **Authentication → Rate limits** : garder les limites OTP par défaut ou plus strictes.
 - **Database → Extensions** : `pg_trgm`, `unaccent`, `pgcrypto` (créées par la migration 0001).
 - **pg_cron** (facultatif) : `select cron.schedule('auto-complete', '0 3 * * *', 'select public.auto_complete_stale_requests()');`

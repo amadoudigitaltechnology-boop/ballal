@@ -96,8 +96,8 @@ select pg_temp.check((select lat is not null and not is_featured from public.sea
 reset role;
 select set_config('request.jwt.claim.sub', '', false);
 set role anon;
-select pg_temp.check((select count(*) from public.professional_contacts) = 0, 'anonyme ne lit pas les contacts');
-select pg_temp.check((select count(*) from public.profiles where id = '00000000-0000-0000-0000-00000000000a') = 0, 'anonyme ne voit pas les clients');
+select pg_temp.expect_error($q$select count(*) from public.professional_contacts$q$, 'anonyme ne lit pas les contacts');
+select pg_temp.expect_error($q$select count(*) from public.profiles$q$, 'anonyme ne voit aucun profil');
 select pg_temp.expect_error($q$select * from public.get_professional_contact('00000000-0000-0000-0000-00000000000c')$q$, 'contact sans connexion');
 select pg_temp.expect_error($q$insert into public.service_requests (client_id, professional_id, title, description) values ('00000000-0000-0000-0000-00000000000a','00000000-0000-0000-0000-00000000000c','x','yyyyyy')$q$, 'demande anonyme');
 reset role;
@@ -312,5 +312,35 @@ select pg_temp.check((select count(*) from public.ads) = 1, 'annonce visible des
 select public.track_ad((select id from public.ads limit 1));
 reset role;
 select pg_temp.check((select impressions = 1 from public.ads), 'affichage d''annonce compté');
+
+-- ═══ 0014 : attaques contre le blindage ═══
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000000000c', false);
+set role authenticated;
+-- Le pro essaie de payer 1 GNF : le serveur impose le vrai tarif.
+insert into public.verification_documents (user_id, doc_type, storage_path, amount_gnf, payment_reference, payment_method)
+values ('00000000-0000-0000-0000-00000000000c', 'identity', '00000000-0000-0000-0000-00000000000c/id.jpg', 1, 'OM-REF-12345', 'orange_money');
+select pg_temp.check((select amount_gnf = 50000 from public.verification_documents where payment_reference = 'OM-REF-12345'), 'montant de vérification imposé par le serveur');
+select pg_temp.expect_error($q$insert into public.verification_documents (user_id, doc_type, storage_path, payment_reference)
+  values ('00000000-0000-0000-0000-00000000000c', 'identity', '00000000-0000-0000-0000-00000000000c/x.jpg', '<script>alert(1)</script>')$q$, 'référence de paiement avec du code');
+update public.verification_documents set status = 'approved'; -- RLS : 0 ligne modifiée
+select pg_temp.check((select count(*) from public.verification_documents where status = 'approved') = 0, 'aucune vérification auto-validée');
+select pg_temp.expect_error($q$update public.professional_profiles set logo_path = '00000000-0000-0000-0000-00000000000a/vol.jpg' where user_id = '00000000-0000-0000-0000-00000000000c'$q$, 'logo pointant vers le dossier d''un autre');
+select pg_temp.expect_error($q$truncate public.messages$q$, 'TRUNCATE depuis l''application');
+select pg_temp.expect_error($q$delete from public.audit_logs$q$, 'effacement du journal');
+select pg_temp.expect_error($q$select * from public.admin_security_log()$q$, 'journal de sécurité lu par un non-admin');
+select pg_temp.expect_error($q$update public.rate_limits set hits = 0$q$, 'remise à zéro des plafonds');
+reset role;
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000000000b', false);
+set role authenticated;
+select pg_temp.expect_error($q$insert into public.verification_documents (user_id, doc_type, storage_path, payment_reference)
+  values ('00000000-0000-0000-0000-00000000000b', 'identity', '00000000-0000-0000-0000-00000000000b/id.jpg', 'om-ref-12345')$q$, 'réutilisation du reçu de paiement d''un autre');
+reset role;
+set role anon;
+select pg_temp.expect_error($q$insert into public.reports (reporter_id, target_type, target_id, reason) values (null, 'professional', gen_random_uuid(), 'spam')$q$, 'écriture sans être connecté');
+select pg_temp.expect_error($q$select * from public.audit_logs limit 1$q$, 'journal lu sans être connecté');
+reset role;
+select pg_temp.check((select count(*) from public.audit_logs where action like 'role_%') >= 1, 'changements de rôles tracés');
+select pg_temp.check((select count(*) from public.audit_logs where action = 'setting_update') >= 1, 'changement de tarif tracé');
+select pg_temp.check((select count(*) from public.app_settings where key = 'push_hook_secret') = 1, 'secret push généré');
 
 \echo '══════ TOUS LES TESTS SONT PASSÉS ══════'

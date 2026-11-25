@@ -4,6 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow">
+<!-- En-têtes de sécurité (GitHub Pages ne permet pas d'en-têtes HTTP : politique CSP intégrée à la page) -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'unsafe-inline'; img-src 'self' data: blob: https://lpoetkfxmaiqxoanhpum.supabase.co; connect-src https://lpoetkfxmaiqxoanhpum.supabase.co wss://lpoetkfxmaiqxoanhpum.supabase.co https://cdn.jsdelivr.net; base-uri 'none'; form-action 'none'; object-src 'none'">
+<meta name="referrer" content="no-referrer">
 <title>Administration · BALLAL</title>
 <style>
 :root{--p:#1A56DB;--d:#0B2A6F;--a:#FF7A1A;--bg:#F6F8FC;--m:#64748B;--b:#E2E8F0;--ok:#16A34A;--warn:#F59E0B;--ko:#DC2626;--soft:#E8F0FF}
@@ -80,6 +83,7 @@ tr:hover td{background:#FAFCFF}
       <button data-tab="users">Utilisateurs</button>
       <button data-tab="ads">Publicités</button>
       <button data-tab="settings">Réglages</button>
+      <button data-tab="security">Sécurité</button>
     </nav>
     <button class="btn sm ghost" id="logout">Déconnexion</button>
   </header>
@@ -103,6 +107,7 @@ tr:hover td{background:#FAFCFF}
       </div>
       <div id="ads"></div>
     </div>
+    <div id="tab-security" class="hidden"></div>
     <div id="tab-settings" class="hidden">
       <div class="card">
         <b>Vérification payante</b>
@@ -122,7 +127,7 @@ tr:hover td{background:#FAFCFF}
 <div class="toast" id="toast"></div>
 
 <script type="module">
-import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.2/+esm';
 
 // Clé publique (« anon ») : elle est faite pour être publique ; la sécurité est assurée côté serveur
 // (chaque fonction d'administration vérifie le rôle de la personne connectée).
@@ -171,9 +176,30 @@ async function start() {
 // ───── Onglets ─────
 document.querySelectorAll('#tabs button').forEach((b) => b.onclick = () => {
   document.querySelectorAll('#tabs button').forEach((x) => x.classList.toggle('on', x === b));
-  ['dash', 'verif', 'reports', 'users', 'ads', 'settings'].forEach((t) => $('tab-' + t).classList.toggle('hidden', t !== b.dataset.tab));
-  ({ dash: loadDash, verif: loadVerif, reports: loadReports, users: loadUsers, ads: loadAds, settings: loadSettings })[b.dataset.tab]();
+  ['dash', 'verif', 'reports', 'users', 'ads', 'settings', 'security'].forEach((t) => $('tab-' + t).classList.toggle('hidden', t !== b.dataset.tab));
+  ({ dash: loadDash, verif: loadVerif, reports: loadReports, users: loadUsers, ads: loadAds, settings: loadSettings, security: loadSecurity })[b.dataset.tab]();
 });
+
+// ───── Journal de sécurité ─────
+const actionNames = { role_insert: 'Rôle ajouté', role_delete: 'Rôle retiré', account_status: 'Statut du compte',
+  setting_update: 'Réglage modifié', setting_insert: 'Réglage créé', pro_flags: 'Options / vérification du pro',
+  verification_approved: 'Vérification acceptée', verification_rejected: 'Vérification refusée' };
+async function loadSecurity() {
+  const box = $('tab-security');
+  box.innerHTML = '<p class="muted">Chargement…</p>';
+  const { data, error } = await sb.rpc('admin_security_log', { p_limit: 200 });
+  if (error) return (box.innerHTML = `<p class="err">${esc(friendly(error))}</p>`);
+  box.innerHTML = `<div class="card"><b>Journal des actions sensibles</b><div class="muted">Les tentatives bloquées (plafonds dépassés, accès admin refusés, reçus réutilisés) sont dans Supabase &gt; Logs : rechercher « BALLAL_SECURITY ».</div></div>
+    <table><thead><tr><th>Date</th><th>Action</th><th>Par</th><th>Détails</th></tr></thead><tbody>${
+    (data || []).map((l) => `<tr><td>${date(l.created_at)}</td><td>${esc(actionNames[l.action] || l.action)}</td>
+      <td>${esc(l.actor_name || 'Système')}</td><td class="muted">${esc(JSON.stringify(l.metadata))}</td></tr>`).join('') || '<tr><td colspan="4">Rien pour le moment.</td></tr>'}</tbody></table>`;
+}
+
+// Déconnexion automatique après 30 minutes sans activité.
+let idle;
+const resetIdle = () => { clearTimeout(idle); idle = setTimeout(async () => { await sb.auth.signOut(); location.reload(); }, 30 * 60 * 1000); };
+['click', 'keydown', 'mousemove', 'touchstart'].forEach((e) => addEventListener(e, resetIdle, { passive: true }));
+resetIdle();
 
 async function loadDash() {
   const { data, error } = await sb.rpc('admin_stats');
@@ -242,7 +268,7 @@ async function loadReports() {
     el.innerHTML = `<div class="row" style="justify-content:space-between">
       <div><span class="tag ko">${esc(reasons[r.reason] || r.reason)}</span> <span class="tag">${esc(targets[r.target_type] || r.target_type)}</span>
       <div style="margin-top:6px">${esc(r.description || '(sans description)')}</div>
-      <div class="muted">Par ${esc(r.profiles?.full_name || '?')} · ${date(r.created_at)}${r.target_type === 'professional' ? ` · <a href="#" data-pro="${r.target_id}">voir le pro</a>` : ''}</div></div>
+      <div class="muted">Par ${esc(r.profiles?.full_name || '?')} · ${date(r.created_at)}${r.target_type === 'professional' ? ` · <a href="#" data-pro="${esc(r.target_id)}">voir le pro</a>` : ''}</div></div>
       <div class="row"><button class="btn sm ok">Traité</button><button class="btn sm ghost">Rejeter</button>
       ${['professional', 'user'].includes(r.target_type) ? '<button class="btn sm ko">Suspendre le compte</button>' : ''}</div></div>`;
     const btns = el.querySelectorAll('button');
@@ -283,7 +309,7 @@ async function loadUsers() {
       return `<tr data-id="${u.id}">
         <td><b>${esc(u.full_name || 'Sans nom')}</b><div class="muted">${esc(u.email || '')}</div><div class="muted">Inscrit le ${date(u.created_at)}</div>
           ${u.status !== 'active' ? `<span class="tag ko">${u.status === 'suspended' ? 'Suspendu' : 'Supprimé'}</span>` : ''}</td>
-        <td>${(u.roles || []).map((r) => `<span class="tag">${roleNames[r] || r}</span>`).join(' ')}</td>
+        <td>${(u.roles || []).map((r) => `<span class="tag">${esc(roleNames[r] || r)}</span>`).join(' ')}</td>
         <td>${u.pro_name ? `${esc(u.pro_name)}<div>${u.is_published ? '<span class="tag ok">Publié</span>' : '<span class="tag warn">Non publié</span>'} ${u.identity_verified ? '<span class="tag ok">Vérifié</span>' : ''}</div>` : '<span class="muted">–</span>'}</td>
         <td>${feat ? `<span class="tag or">Mis en avant → ${date(u.featured_until)}</span><br>` : ''}${prem ? `<span class="tag warn">Premium → ${date(u.premium_until)}</span>` : ''}${!feat && !prem ? '<span class="muted">–</span>' : ''}</td>
         <td><div class="row">
@@ -321,7 +347,7 @@ async function loadAds() {
   if (error) return (box.innerHTML = `<p class="err">${esc(friendly(error))}</p>`);
   if (!data.length) return (box.innerHTML = '<div class="card">Aucune annonce pour le moment.</div>');
   box.innerHTML = data.map((a) => `<div class="card row" data-id="${a.id}" style="justify-content:space-between">
-    <div class="row">${a.image_path ? `<img src="${sb.storage.from('ads').getPublicUrl(a.image_path).data.publicUrl}" style="width:64px;height:64px;object-fit:cover;border-radius:12px">` : ''}
+    <div class="row">${a.image_path ? `<img src="${esc(sb.storage.from('ads').getPublicUrl(a.image_path).data.publicUrl)}" style="width:64px;height:64px;object-fit:cover;border-radius:12px">` : ''}
       <div><b>${esc(a.title)}</b> ${a.is_active ? '<span class="tag ok">Active</span>' : '<span class="tag warn">En pause</span>'}
       <div class="muted">${esc(a.body || '')}</div>
       <div class="muted">${a.impressions} affichages · ${a.clicks} clics${a.ends_at ? ' · fin ' + date(a.ends_at) : ''}</div></div></div>

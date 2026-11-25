@@ -1,7 +1,7 @@
 // BALLAL — envoi des notifications push (Firebase Cloud Messaging, API HTTP v1).
 // Appelée par la base à chaque notification créée : { notification_id }.
-// Sécurité : la fonction relit la notification en base (clé service) et ne l'envoie qu'une fois,
-// et seulement si elle a moins de 10 minutes. Un appel forgé ne peut donc rien envoyer d'arbitraire.
+// Sécurité : seul l'appel de la base (en-tête secret x-ballal-hook) est accepté ; la fonction relit
+// la notification en base (clé service) et ne l'envoie qu'une fois, si elle a moins de 10 minutes.
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
 const supa = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, {
@@ -54,8 +54,38 @@ function routeFor(n: { type: string; entity_type: string | null; entity_id: stri
   return "/notifications";
 }
 
+let hookSecret: { value: string; at: number } | null = null;
+async function expectedSecret(): Promise<string | null> {
+  if (hookSecret && Date.now() - hookSecret.at < 5 * 60 * 1000) return hookSecret.value;
+  const { data } = await supa.from("app_settings").select("value").eq("key", "push_hook_secret").maybeSingle();
+  const v = typeof data?.value === "string" ? data.value : null;
+  if (v) hookSecret = { value: v, at: Date.now() };
+  return v;
+}
+
+/** Comparaison à temps constant (pas d'indice sur le secret par la durée de réponse). */
+function sameSecret(a: string, b: string): boolean {
+  const x = new TextEncoder().encode(a);
+  const y = new TextEncoder().encode(b);
+  let diff = x.length ^ y.length;
+  for (let i = 0; i < Math.max(x.length, y.length); i++) diff |= (x[i] ?? 0) ^ (y[i] ?? 0);
+  return diff === 0;
+}
+
+const json = (status: number, body: unknown) =>
+  new Response(JSON.stringify(body), {
+    status,
+    headers: { "Content-Type": "application/json", "X-Content-Type-Options": "nosniff", "Cache-Control": "no-store" },
+  });
+
 Deno.serve(async (req) => {
   if (req.method !== "POST") return new Response("Method not allowed", { status: 405 });
+  const expected = await expectedSecret();
+  const given = req.headers.get("x-ballal-hook") ?? "";
+  if (!expected || !sameSecret(given, expected)) {
+    console.warn("BALLAL_SECURITY push_forbidden", req.headers.get("x-forwarded-for") ?? "");
+    return json(401, { error: "unauthorized" });
+  }
   let id: string | undefined;
   try {
     id = (await req.json())?.notification_id;

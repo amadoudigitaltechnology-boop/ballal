@@ -64,7 +64,7 @@ class _LoginScreenState extends State<LoginScreen> {
       setState(() => _error = l.emailInvalid);
       return;
     }
-    if (_password.text.length < 8) {
+    if (_password.text.length < 8 || (_signup && !_strong(_password.text))) {
       showInfo(context, l.passwordTooShort);
       return;
     }
@@ -847,7 +847,7 @@ class _NewPasswordScreenState extends State<NewPasswordScreen> {
 
   Future<void> _save() async {
     final l = context.l10n;
-    if (_password.text.length < 8) {
+    if (_password.text.length < 8 || !_strong(_password.text)) {
       showInfo(context, l.passwordTooShort);
       return;
     }
@@ -928,3 +928,6 @@ class _NewPasswordScreenState extends State<NewPasswordScreen> {
     );
   }
 }
+
+/// Mot de passe robuste : au moins une lettre et un chiffre (8 caractères vérifiés à part).
+bool _strong(String p) => RegExp(r'[A-Za-zÀ-ÿ]').hasMatch(p) && RegExp(r'[0-9]').hasMatch(p);

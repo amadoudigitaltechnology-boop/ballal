@@ -9,7 +9,7 @@ import { Alert, KeyboardAvoidingView, Pressable, ScrollView, Text, View } from '
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button, FadeIn, Input, Logo, Pressy, Rise, styles } from '@/components/ui';
-import { friendlyError, supabase } from '@/lib/supabase';
+import { friendlyError, strongPassword, supabase } from '@/lib/supabase';
 import { C, F, people } from '@/lib/theme';
 
 WebBrowser.maybeCompleteAuthSession();
@@ -31,7 +31,8 @@ export default function Login() {
   const submit = async () => {
     const mail = email.trim().toLowerCase();
     if (!/^\S+@\S+\.\S+$/.test(mail)) return Alert.alert('E-mail invalide', 'Vérifiez votre adresse e-mail.');
-    if (password.length < 8) return Alert.alert('Mot de passe', 'Le mot de passe doit contenir au moins 8 caractères.');
+    if (password.length < 8 || (signup && !strongPassword(password)))
+      return Alert.alert('Mot de passe', '8 caractères minimum, avec au moins une lettre et un chiffre.');
     if (signup && password !== confirm) return Alert.alert('Mot de passe', 'Les deux mots de passe ne sont pas identiques.');
     setLoading(true);
     try {

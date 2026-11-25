@@ -2,13 +2,13 @@ import 'react-native-url-polyfill/auto';
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient } from '@supabase/supabase-js';
-import Constants from 'expo-constants';
 import { AppState, Platform } from 'react-native';
 
-const extra = (Constants.expoConfig?.extra ?? {}) as { supabaseUrl: string; supabaseAnonKey: string };
+import { env } from './env';
+
 
 /** Même base que l'application Flutter : comptes, pros, messages partagés. */
-export const supabase = createClient(extra.supabaseUrl, extra.supabaseAnonKey, {
+export const supabase = createClient(env.supabaseUrl, env.supabaseAnonKey, {
   auth: {
     storage: AsyncStorage,
     autoRefreshToken: true,
@@ -42,4 +42,9 @@ export function friendlyError(e: unknown): string {
   if (l.includes('network') || l.includes('fetch')) return 'Pas de connexion Internet.';
   if (l.includes('rate limit')) return 'Trop de tentatives. Réessayez dans quelques minutes.';
   return 'Une erreur s’est produite. Réessayez.';
+}
+
+/** Mot de passe robuste : 8 caractères, au moins une lettre et un chiffre. */
+export function strongPassword(p: string): boolean {
+  return p.length >= 8 && /[A-Za-zÀ-ÿ]/.test(p) && /[0-9]/.test(p);
 }
