@@ -1,13 +1,11 @@
-import { Image } from 'expo-image';
-import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useRef, useState } from 'react';
 import { Animated, Dimensions, FlatList, Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Button, FadeIn, Logo, styles } from '@/components/ui';
+import { Button, FadeIn, Logo, PeopleStage, styles } from '@/components/ui';
 import { useSession } from '@/lib/session';
-import { C, F, people } from '@/lib/theme';
+import { C, F } from '@/lib/theme';
 
 const W = Dimensions.get('window').width;
 
@@ -17,21 +15,13 @@ const slides = [
   { photos: ['beauty', 'chef', 'doctor', 'delivery'] as const, title: 'Tous les métiers, près de chez vous', text: 'Beauté, cuisine, santé, livraison… Créez votre compte et trouvez le bon pro en quelques secondes.' },
 ];
 
-function Photo({ name, style }: { name: keyof typeof people; style?: object }) {
-  return (
-    <View style={[{ flex: 1, borderRadius: 24, overflow: 'hidden', shadowColor: C.primary, shadowOpacity: 0.18, shadowRadius: 18, elevation: 4 }, style]}>
-      <Image source={people[name]} style={{ flex: 1 }} contentFit="cover" contentPosition="top" transition={400} />
-      <LinearGradient colors={['transparent', 'rgba(11,42,111,0.2)']} style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: '40%' }} />
-    </View>
-  );
-}
-
-/** Écrans de présentation (identiques à la version Flutter v16) : photos en cadres arrondis. */
+/** Écrans de présentation : personnages détourés sur l'arche dégradée (première version). Écran fixe, sans défilement vertical. */
 export default function Welcome() {
   const { markOnboardingSeen } = useSession();
   const [page, setPage] = useState(0);
   const list = useRef<FlatList>(null);
   const x = useState(() => new Animated.Value(0))[0];
+  const [slideH, setSlideH] = useState(0);
   const last = page === slides.length - 1;
 
   const finish = async () => {
@@ -50,10 +40,13 @@ export default function Welcome() {
           </Pressable>
         ) : null}
       </View>
+      <View style={{ flex: 1 }} onLayout={(e) => setSlideH(e.nativeEvent.layout.height)}>
       <Animated.FlatList
         ref={list}
         data={slides}
         horizontal
+        bounces={false}
+        overScrollMode="never"
         pagingEnabled
         showsHorizontalScrollIndicator={false}
         keyExtractor={(_, i) => String(i)}
@@ -62,44 +55,19 @@ export default function Welcome() {
         renderItem={({ item, index }) => {
           const opacity = x.interpolate({ inputRange: [(index - 1) * W, index * W, (index + 1) * W], outputRange: [0, 1, 0] });
           return (
-            <Animated.View style={{ width: W, paddingHorizontal: 24, opacity }}>
+            <Animated.View style={{ width: W, height: slideH, paddingHorizontal: 24, opacity }}>
               <FadeIn>
                 <Text style={[styles.h1, { marginTop: 16 }]}>{item.title}</Text>
                 <Text style={{ color: C.primary, fontFamily: F.semibold, fontSize: 15, marginTop: 10, lineHeight: 21 }}>{item.text}</Text>
               </FadeIn>
-              <View style={{ flex: 1, marginTop: 20, marginBottom: 8 }}>
-                {item.photos.length === 1 ? (
-                  <FadeIn index={1} style={{ flex: 1 }}>
-                    <Photo name={item.photos[0]} />
-                  </FadeIn>
-                ) : item.photos.length === 2 ? (
-                  <View style={{ flex: 1, flexDirection: 'row', gap: 12 }}>
-                    <FadeIn index={1} style={{ flex: 1 }}>
-                      <Photo name={item.photos[0]} />
-                    </FadeIn>
-                    <FadeIn index={2} style={{ flex: 1, paddingTop: 36 }}>
-                      <Photo name={item.photos[1]} />
-                    </FadeIn>
-                  </View>
-                ) : (
-                  <View style={{ flex: 1, gap: 12 }}>
-                    {[0, 2].map((r) => (
-                      <View key={r} style={{ flex: 1, flexDirection: 'row', gap: 12 }}>
-                        <FadeIn index={r + 1} style={{ flex: 1 }}>
-                          <Photo name={item.photos[r]} />
-                        </FadeIn>
-                        <FadeIn index={r + 2} style={{ flex: 1 }}>
-                          <Photo name={item.photos[r + 1]} />
-                        </FadeIn>
-                      </View>
-                    ))}
-                  </View>
-                )}
+              <View style={{ flex: 1, marginTop: 16 }}>
+                <PeopleStage names={[...item.photos]} />
               </View>
             </Animated.View>
           );
         }}
       />
+      </View>
       <View style={[styles.row, { justifyContent: 'center', marginTop: 8 }]}>
         {slides.map((_, i) => (
           <View

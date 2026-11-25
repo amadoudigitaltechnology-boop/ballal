@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
+import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect, useState, type ReactNode } from 'react';
 import {
@@ -15,7 +16,7 @@ import {
   type ViewStyle,
 } from 'react-native';
 
-import { C, F, brandGradient, logo, radius, shadow } from '@/lib/theme';
+import { C, F, brandGradient, logo, people, radius, shadow } from '@/lib/theme';
 
 export function Logo({ height = 32 }: { height?: number }) {
   return <Image source={logo} style={{ height, width: height * 3.55 }} contentFit="contain" accessibilityLabel="BALLAL" />;
@@ -50,7 +51,14 @@ export function Pressy({
   const s = useState(() => new Animated.Value(1))[0];
   const to = (v: number) => Animated.spring(s, { toValue: v, useNativeDriver: true, speed: 40, bounciness: 6 }).start();
   return (
-    <Pressable disabled={disabled} onPress={onPress} onPressIn={() => to(0.96)} onPressOut={() => to(1)}>
+    <Pressable
+      disabled={disabled}
+      onPress={() => {
+        Haptics.selectionAsync().catch(() => undefined);
+        onPress?.();
+      }}
+      onPressIn={() => to(0.96)}
+      onPressOut={() => to(1)}>
       <Animated.View style={[style, { transform: [{ scale: s }] }]}>{children}</Animated.View>
     </Pressable>
   );
@@ -176,10 +184,53 @@ export function Empty({ icon, title, text }: { icon: keyof typeof Ionicons.glyph
   );
 }
 
+/** Vibration légère (retour tactile natif). */
+export const tap = () => Haptics.selectionAsync().catch(() => undefined);
+
+/**
+ * Personnages détourés (sans fond) posés sur une arche dégradée bleu → orange,
+ * comme dans la première version. Les photos ne sont jamais rognées (contain).
+ */
+export function PeopleStage({ names, arch = true }: { names: (keyof typeof people)[]; arch?: boolean }) {
+  const n = names.length;
+  const h = n === 1 ? '96%' : n === 2 ? '88%' : '66%';
+  return (
+    <View style={{ flex: 1, justifyContent: 'flex-end', alignItems: 'center' }}>
+      {arch ? (
+        <LinearGradient
+          colors={[C.primarySoft, '#FFE7D3']}
+          style={{ position: 'absolute', bottom: 0, width: '94%', height: '80%', borderTopLeftRadius: 400, borderTopRightRadius: 400 }}
+        />
+      ) : null}
+      <View style={{ flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'center', height: '100%', width: '100%' }}>
+        {names.map((name, i) => (
+          <Rise key={name} index={i} style={{ flex: 1, height: h }}>
+            <Image source={people[name]} style={{ flex: 1 }} contentFit="contain" contentPosition="bottom" transition={300} />
+          </Rise>
+        ))}
+      </View>
+    </View>
+  );
+}
+
+/** Montée depuis le bas avec rebond (personnages, cartes). */
+export function Rise({ children, index = 0, style }: { children: ReactNode; index?: number; style?: StyleProp<ViewStyle> }) {
+  const v = useState(() => new Animated.Value(0))[0];
+  useEffect(() => {
+    Animated.spring(v, { toValue: 1, delay: 120 + index * 110, useNativeDriver: true, speed: 9, bounciness: 7 }).start();
+  }, [v, index]);
+  return (
+    <Animated.View
+      style={[style, { opacity: v, transform: [{ translateY: v.interpolate({ inputRange: [0, 1], outputRange: [50, 0] }) }] }]}>
+      {children}
+    </Animated.View>
+  );
+}
+
 export const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center' },
   card: { backgroundColor: C.white, borderRadius: radius, padding: 14, ...shadow },
-  btn: { height: 54, borderRadius: 27, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 20 },
+  btn: { height: 52, borderRadius: 26, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 20 },
   btnShadow: { shadowColor: C.primary, shadowOpacity: 0.3, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 4 },
   outline: { borderWidth: 1.2, borderColor: C.border, backgroundColor: C.white },
   btnText: { fontFamily: F.bold, fontSize: 16 },
@@ -191,7 +242,7 @@ export const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: 'transparent',
     paddingHorizontal: 16,
-    height: 56,
+    height: 52,
   },
   inputText: { flex: 1, fontFamily: F.body, fontSize: 15, color: C.text },
   h1: { fontFamily: F.displayHeavy, fontSize: 28, color: C.primaryDark, letterSpacing: -0.5 },

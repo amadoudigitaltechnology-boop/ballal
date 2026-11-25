@@ -25,9 +25,11 @@ export default function ProProfile() {
 
   const contact = async () => {
     const { data, error } = await supabase.rpc('start_conversation', { p_professional: id, p_request: null });
-    if (error) return Alert.alert('BALLAL', 'Impossible de démarrer la discussion pour le moment.');
-    Alert.alert('BALLAL', 'Discussion créée ✅ Retrouvez-la dans l’onglet Messages.', [{ text: 'OK', onPress: () => router.push('/messages') }]);
-    return data;
+    if (error || !data) return Alert.alert('BALLAL', 'Impossible de démarrer la discussion pour le moment.');
+    router.push({
+      pathname: '/chat/[id]',
+      params: { id: data as string, name: pro?.displayName ?? '', avatar: pro?.logoPath ?? '', pro: '1', other: id },
+    });
   };
 
   if (pro === undefined) return <ActivityIndicator color={C.primary} style={{ flex: 1 }} />;

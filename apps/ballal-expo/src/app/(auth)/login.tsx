@@ -5,18 +5,18 @@ import * as Linking from 'expo-linking';
 import { router } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import { useEffect, useState } from 'react';
-import { Alert, Dimensions, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, Pressable, ScrollView, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Button, FadeIn, Input, Logo, Pressy, styles } from '@/components/ui';
+import { Button, FadeIn, Input, Logo, Pressy, Rise, styles } from '@/components/ui';
 import { friendlyError, supabase } from '@/lib/supabase';
 import { C, F, people } from '@/lib/theme';
 
 WebBrowser.maybeCompleteAuthSession();
 
-const H = Dimensions.get('window').height;
-
-/** Connexion / création de compte (même écran que la version Flutter v16). */
+/** Connexion / création de compte : écran fixe qui tient sur l'écran (pas de défilement façon page web). */
 export default function Login() {
+  const insets = useSafeAreaInsets();
   const [signup, setSignup] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -82,31 +82,37 @@ export default function Login() {
   };
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: '#fff' }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: 32 }}>
-        {/* Photo d'accueil sur la vague bleue, logo à droite */}
-        <View style={{ height: Math.min(Math.max(H * 0.42, 280), 380) }}>
+    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: '#fff' }} behavior="padding">
+      <ScrollView
+        keyboardShouldPersistTaps="handled"
+        bounces={false}
+        overScrollMode="never"
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ flexGrow: 1, paddingBottom: insets.bottom + 12 }}>
+        {/* Haut d'écran : la dame détourée (sans fond, non rognée) entourée du disque bleu, logo à droite */}
+        <View style={{ flex: 1, minHeight: 150, maxHeight: 340 }}>
           <LinearGradient colors={['#E8F0FF', '#D6E4FF']} style={{ position: 'absolute', inset: 0, borderBottomLeftRadius: 48, borderBottomRightRadius: 120 }} />
           <View style={{ position: 'absolute', right: -60, top: -40, width: 220, height: 220, borderRadius: 110, backgroundColor: C.primary }} />
-          <View style={{ position: 'absolute', right: 40, top: 120, width: 70, height: 70, borderRadius: 35, backgroundColor: C.accent, opacity: 0.9 }} />
-          <FadeIn style={{ position: 'absolute', left: 24, top: 56, bottom: 34, aspectRatio: 0.92 }}>
-            <View style={{ flex: 1, borderRadius: 28, borderWidth: 4, borderColor: '#fff', overflow: 'hidden', backgroundColor: '#fff' }}>
-              <Image source={people.woman_phone} style={{ flex: 1 }} contentFit="cover" contentPosition="top" />
-            </View>
-          </FadeIn>
-          <View style={{ position: 'absolute', right: 16, top: 70, backgroundColor: '#fff', borderRadius: 14, paddingHorizontal: 10, paddingVertical: 6 }}>
+          <View style={{ position: 'absolute', right: 46, bottom: 40, width: 54, height: 54, borderRadius: 27, backgroundColor: C.accent, opacity: 0.9 }} />
+          <View style={{ position: 'absolute', left: 10, bottom: 0, top: insets.top + 30, width: '62%', alignItems: 'center', justifyContent: 'flex-end' }}>
+            <View style={{ position: 'absolute', bottom: 0, width: '92%', aspectRatio: 1, maxHeight: '88%', borderRadius: 999, backgroundColor: 'rgba(26,86,219,0.14)', borderWidth: 3, borderColor: '#fff' }} />
+            <Rise style={{ width: '100%', height: '100%' }}>
+              <Image source={people.woman_phone} style={{ flex: 1 }} contentFit="contain" contentPosition="bottom" />
+            </Rise>
+          </View>
+          <View style={{ position: 'absolute', right: 16, top: insets.top + 54, backgroundColor: '#fff', borderRadius: 14, paddingHorizontal: 10, paddingVertical: 6 }}>
             <Logo height={22} />
           </View>
         </View>
 
-        <FadeIn index={1} style={{ paddingHorizontal: 24, paddingTop: 12 }}>
-          <Text style={[styles.h1, { fontSize: 30 }]}>Bienvenue !</Text>
-          <Text style={[styles.muted, { fontSize: 15, marginTop: 4 }]}>
-            {signup ? 'Créez votre compte en 1 minute.' : 'Connectez-vous ou créez votre compte pour continuer.'}
+        <FadeIn index={1} style={{ paddingHorizontal: 24, paddingTop: 10 }}>
+          <Text style={[styles.h1, { fontSize: 28 }]}>Bienvenue !</Text>
+          <Text style={[styles.muted, { fontSize: 14, marginTop: 2 }]}>
+            {signup ? 'Créez votre compte en 1 minute.' : 'Connectez-vous pour continuer.'}
           </Text>
 
           {/* Bascule Se connecter / Créer un compte */}
-          <View style={{ flexDirection: 'row', backgroundColor: C.field, borderRadius: 16, padding: 4, marginTop: 18 }}>
+          <View style={{ flexDirection: 'row', backgroundColor: C.field, borderRadius: 16, padding: 4, marginTop: 14 }}>
             {[false, true].map((s) => (
               <Pressable key={String(s)} style={{ flex: 1 }} onPress={() => setSignup(s)}>
                 <View style={{ paddingVertical: 11, borderRadius: 12, backgroundColor: signup === s ? '#fff' : 'transparent' }}>
@@ -118,7 +124,7 @@ export default function Login() {
             ))}
           </View>
 
-          <View style={{ gap: 12, marginTop: 18 }}>
+          <View style={{ gap: 10, marginTop: 14 }}>
             <Input
               icon="at"
               placeholder="Adresse e-mail"
@@ -131,7 +137,7 @@ export default function Login() {
             />
             <Input
               icon="lock-closed-outline"
-              placeholder={signup ? 'Mot de passe (8 caractères minimum)' : 'Mot de passe'}
+              placeholder={signup ? 'Mot de passe (8 caractères min.)' : 'Mot de passe'}
               value={password}
               onChangeText={setPassword}
               secure
@@ -144,16 +150,16 @@ export default function Login() {
           </View>
 
           {!signup ? (
-            <Pressable onPress={() => router.push({ pathname: '/forgot', params: { email } })} style={{ alignSelf: 'flex-end', paddingVertical: 12 }}>
+            <Pressable onPress={() => router.push({ pathname: '/forgot', params: { email } })} style={{ alignSelf: 'flex-end', paddingVertical: 10 }}>
               <Text style={{ color: C.primary, fontFamily: F.bold }}>Mot de passe oublié ?</Text>
             </Pressable>
           ) : (
-            <View style={{ height: 16 }} />
+            <View style={{ height: 14 }} />
           )}
 
           <Button label={signup ? 'Créer un compte' : 'Se connecter'} icon="arrow-forward" onPress={submit} loading={loading} />
 
-          <View style={[styles.row, { marginVertical: 18 }]}>
+          <View style={[styles.row, { marginVertical: 12 }]}>
             <View style={{ flex: 1, height: 1, backgroundColor: C.border }} />
             <Text style={[styles.muted, { marginHorizontal: 12 }]}>ou</Text>
             <View style={{ flex: 1, height: 1, backgroundColor: C.border }} />

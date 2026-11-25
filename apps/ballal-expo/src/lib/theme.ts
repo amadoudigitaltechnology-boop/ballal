@@ -51,14 +51,14 @@ export const shadow = {
 } as const;
 
 export const people = {
-  woman_phone: require('../../assets/people/woman_phone.jpg'),
-  business: require('../../assets/people/business.jpg'),
-  plumber: require('../../assets/people/plumber.jpg'),
-  builder: require('../../assets/people/builder.jpg'),
-  beauty: require('../../assets/people/beauty.jpg'),
-  chef: require('../../assets/people/chef.jpg'),
-  doctor: require('../../assets/people/doctor.jpg'),
-  delivery: require('../../assets/people/delivery.jpg'),
+  woman_phone: require('../../assets/people/woman_phone.png'),
+  business: require('../../assets/people/business.png'),
+  plumber: require('../../assets/people/plumber.png'),
+  builder: require('../../assets/people/builder.png'),
+  beauty: require('../../assets/people/beauty.png'),
+  chef: require('../../assets/people/chef.png'),
+  doctor: require('../../assets/people/doctor.png'),
+  delivery: require('../../assets/people/delivery.png'),
 };
 
 export const logo = require('../../assets/logo_ballal.png');

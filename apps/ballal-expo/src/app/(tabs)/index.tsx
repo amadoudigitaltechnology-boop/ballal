@@ -1,123 +1,175 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { router } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, RefreshControl, Text, View } from 'react-native';
+import { router, useFocusEffect } from 'expo-router';
+import { useCallback, useState } from 'react';
+import { ActivityIndicator, Animated, Dimensions, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { ProTile } from '@/components/ProTile';
-import { Button, Card, Empty, FadeIn, Logo, SectionHeader, styles } from '@/components/ui';
+import { ProCardBig } from '@/components/ProTile';
+import { Button, Empty, FadeIn, Logo, Pressy, Rise, styles, tap } from '@/components/ui';
 import { categoryIcon, families, searchPros, type Category, type ProCard } from '@/lib/api';
-import { C, F, brandGradient, people } from '@/lib/theme';
+import { useSession } from '@/lib/session';
+import { C, F, brandGradient, people, shadow } from '@/lib/theme';
 
-/** Accueil : bannière, catégories, tous les professionnels publiés (comme la version Flutter v16). */
+const { width: W, height: H } = Dimensions.get('window');
+const CARD = Math.round(W * 0.6);
+const GAP = 14;
+const BANNER = Math.round(Math.min(Math.max(H * 0.19, 128), 168));
+
+/**
+ * Accueil « application mobile » : l'écran est fixe et tient en entier (aucun défilement vertical).
+ * En-tête · recherche · bannière · catégories (glisser à l'horizontale) · carrousel des pros.
+ */
 export default function Home() {
+  const { profile } = useSession();
   const [cats, setCats] = useState<Category[]>([]);
-  const [pros, setPros] = useState<ProCard[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [more, setMore] = useState(true);
+  const [pros, setPros] = useState<ProCard[] | null>(null);
   const [error, setError] = useState(false);
+  const x = useState(() => new Animated.Value(0))[0];
 
-  const load = useCallback(async (reset = false) => {
-    try {
-      const [c, page] = await Promise.all([reset || cats.length === 0 ? families() : Promise.resolve(cats), searchPros({ sort: 'rating', offset: reset ? 0 : pros.length })]);
-      setError(false);
-      setCats(c);
-      setPros((prev) => (reset ? page : [...prev, ...page.filter((p) => !prev.some((x) => x.id === p.id))]));
-      setMore(page.length >= 20);
-    } catch {
-      setError(true);
-    } finally {
-      setLoading(false);
-    }
-  }, [cats, pros.length]);
+  useFocusEffect(
+    useCallback(() => {
+      let alive = true;
+      Promise.all([families(), searchPros({ sort: 'rating' })])
+        .then(([c, p]) => {
+          if (!alive) return;
+          setCats(c);
+          setPros(p);
+          setError(false);
+        })
+        .catch(() => alive && setError(true));
+      return () => {
+        alive = false;
+      };
+    }, []),
+  );
 
-  // Premier chargement (déclenché hors du rendu)
-  useEffect(() => {
-    const t = setTimeout(() => load(true), 0);
-    return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  const first = (profile?.fullName ?? '').trim().split(/\s+/)[0];
+  const hour = new Date().getHours();
+  const hello = hour < 18 ? 'Bonjour' : 'Bonsoir';
 
-  const header = (
-    <View>
-      <View style={[styles.row, { paddingHorizontal: 20, paddingTop: 8 }]}>
-        <Logo height={30} />
-        <View style={{ flex: 1 }} />
-        <Pressable onPress={() => router.push('/settings')} hitSlop={10}>
-          <Ionicons name="settings-outline" size={25} color={C.text} />
-        </Pressable>
+  return (
+    <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }} edges={['top']}>
+      {/* En-tête */}
+      <View style={[styles.row, { paddingHorizontal: 20, paddingTop: 6, height: 52 }]}>
+        <View style={{ flex: 1 }}>
+          <Text style={{ fontFamily: F.medium, color: C.muted, fontSize: 13 }}>{hello}{first ? ` ${first}` : ''} 👋</Text>
+          <Logo height={24} />
+        </View>
+        <Pressy onPress={() => router.push('/settings')} style={headerBtn}>
+          <Ionicons name="settings-outline" size={21} color={C.text} />
+        </Pressy>
       </View>
 
-      <Pressable onPress={() => router.push('/search')} style={{ marginHorizontal: 16, marginTop: 14 }}>
-        <View style={[styles.input, { pointerEvents: 'none' }]}>
-          <Ionicons name="search" size={20} color={C.muted} style={{ marginRight: 10 }} />
-          <Text style={{ color: '#94A3B8', fontFamily: F.body, fontSize: 15 }}>Rechercher un service…</Text>
+      {/* Recherche */}
+      <Pressy onPress={() => router.push('/search')} style={{ marginHorizontal: 16, marginTop: 10 }}>
+        <View style={[styles.row, { backgroundColor: '#fff', height: 50, borderRadius: 25, paddingLeft: 18, paddingRight: 6, ...shadow }]}>
+          <Ionicons name="search" size={19} color={C.muted} />
+          <Text style={{ flex: 1, marginLeft: 10, color: '#94A3B8', fontFamily: F.body, fontSize: 14.5 }}>Plombier, coiffeuse, électricien…</Text>
+          <LinearGradient colors={brandGradient} style={{ width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' }}>
+            <Ionicons name="arrow-forward" size={18} color="#fff" />
+          </LinearGradient>
         </View>
-      </Pressable>
+      </Pressy>
 
-      {/* Bannière bleue avec l'homme au pouce levé */}
-      <FadeIn>
+      {/* Bannière : homme détouré, jamais rogné */}
+      <FadeIn index={1}>
         <LinearGradient
           colors={brandGradient}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
-          style={{ height: 168, marginHorizontal: 16, marginTop: 16, borderRadius: 22, overflow: 'hidden', padding: 20 }}>
-          <View style={{ position: 'absolute', right: -30, bottom: -50, width: 190, height: 190, borderRadius: 95, backgroundColor: 'rgba(255,255,255,0.08)' }} />
-          <View style={{ position: 'absolute', right: 14, top: 14, bottom: 14, aspectRatio: 0.82, borderRadius: 20, borderWidth: 3, borderColor: 'rgba(255,255,255,0.9)', overflow: 'hidden' }}>
-            <Image source={people.business} style={{ flex: 1 }} contentFit="cover" contentPosition="top" />
-          </View>
-          <View style={{ width: '50%', flex: 1, justifyContent: 'space-between' }}>
-            <Text style={{ color: '#fff', fontFamily: F.displayHeavy, fontSize: 19, lineHeight: 24 }}>Trouvez le meilleur service près de vous</Text>
+          style={{ height: BANNER, marginHorizontal: 16, marginTop: 14, borderRadius: 24, overflow: 'hidden', paddingLeft: 18, paddingVertical: 16 }}>
+          <View style={{ position: 'absolute', right: -24, bottom: -60, width: BANNER * 1.25, height: BANNER * 1.25, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.12)' }} />
+          <View style={{ position: 'absolute', right: 70, top: -30, width: 70, height: 70, borderRadius: 35, backgroundColor: 'rgba(255,122,26,0.55)' }} />
+          <Rise style={{ position: 'absolute', right: 4, top: 10, bottom: 0, width: '44%' }}>
+            <Image source={people.business} style={{ flex: 1 }} contentFit="contain" contentPosition="bottom" />
+          </Rise>
+          <View style={{ width: '56%', flex: 1, justifyContent: 'space-between' }}>
+            <Text style={{ color: '#fff', fontFamily: F.displayHeavy, fontSize: 18, lineHeight: 23 }}>Trouvez le meilleur service près de vous</Text>
             <Button label="Découvrir" icon="arrow-forward" variant="accent" onPress={() => router.push('/search')} style={{ alignSelf: 'flex-start' }} />
           </View>
         </LinearGradient>
       </FadeIn>
 
-      <SectionHeader title="Catégories" />
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 12 }}>
-        {cats.slice(0, 6).map((c, i) => (
-          <View key={c.id} style={{ width: '33.33%', padding: 4 }}>
-            <FadeIn index={i}>
-              <Card onPress={() => router.push({ pathname: '/search', params: { category: c.id, name: c.name } })} style={{ alignItems: 'center', paddingVertical: 14, paddingHorizontal: 6 }}>
-                <View style={{ backgroundColor: i % 2 ? C.primarySoft : C.accentSoft, width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center' }}>
-                  <Ionicons name={categoryIcon(c.icon) as keyof typeof Ionicons.glyphMap} size={24} color={i % 2 ? C.primary : C.accent} />
-                </View>
-                <Text numberOfLines={2} style={{ fontFamily: F.semibold, fontSize: 12, marginTop: 6, textAlign: 'center', color: C.text }}>
-                  {c.name}
-                </Text>
-              </Card>
-            </FadeIn>
-          </View>
+      {/* Catégories : une seule ligne qui glisse */}
+      <SectionTitle title="Catégories" />
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        overScrollMode="never"
+        contentContainerStyle={{ paddingHorizontal: 12 }}
+        style={{ flexGrow: 0 }}>
+        {cats.map((c, i) => (
+          <FadeIn key={c.id} index={i} style={{ width: 78, alignItems: 'center' }}>
+            <Pressy onPress={() => router.push({ pathname: '/search', params: { category: c.id, name: c.name } })} style={{ alignItems: 'center' }}>
+              <LinearGradient
+                colors={i % 2 ? ['#FFB066', C.accent] : ['#4F86FF', C.primary]}
+                style={{ width: 54, height: 54, borderRadius: 18, alignItems: 'center', justifyContent: 'center', transform: [{ rotate: '-6deg' }] }}>
+                <Ionicons name={categoryIcon(c.icon) as keyof typeof Ionicons.glyphMap} size={25} color="#fff" style={{ transform: [{ rotate: '6deg' }] }} />
+              </LinearGradient>
+              <Text numberOfLines={1} style={{ fontFamily: F.semibold, fontSize: 11.5, marginTop: 6, color: C.text, maxWidth: 74 }}>
+                {c.name}
+              </Text>
+            </Pressy>
+          </FadeIn>
         ))}
-      </View>
+      </ScrollView>
 
-      <SectionHeader title="Tous les professionnels" action="Voir tout" onAction={() => router.push('/search')} />
-    </View>
-  );
-
-  return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }} edges={['top']}>
-      <FlatList
-        data={pros}
-        keyExtractor={(p) => p.id}
-        renderItem={({ item, index }) => <ProTile pro={item} index={index} />}
-        ListHeaderComponent={header}
-        ListEmptyComponent={
-          loading ? (
-            <ActivityIndicator color={C.primary} style={{ marginTop: 24 }} />
-          ) : error ? (
-            <Empty icon="cloud-offline-outline" title="Connexion impossible" text="Vérifiez votre connexion puis tirez vers le bas." />
+      {/* Carrousel des professionnels : prend toute la place restante */}
+      <SectionTitle title="Professionnels" action="Voir tout" onAction={() => router.push('/search')} />
+      <View style={{ flex: 1, paddingBottom: 86 }}>
+        {pros === null ? (
+          error ? (
+            <Empty icon="cloud-offline-outline" title="Connexion impossible" text="Vérifiez votre connexion internet." />
           ) : (
-            <Empty icon="people-outline" title="Aucun professionnel publié pour le moment." />
+            <ActivityIndicator color={C.primary} style={{ marginTop: 30 }} />
           )
-        }
-        onEndReached={() => more && !loading && load()}
-        onEndReachedThreshold={0.4}
-        refreshControl={<RefreshControl refreshing={false} onRefresh={() => load(true)} tintColor={C.primary} />}
-        contentContainerStyle={{ paddingBottom: 110 }}
-      />
+        ) : pros.length === 0 ? (
+          <Empty icon="people-outline" title="Aucun professionnel publié pour le moment." />
+        ) : (
+          <Animated.FlatList
+            data={pros}
+            horizontal
+            keyExtractor={(p) => p.id}
+            showsHorizontalScrollIndicator={false}
+            overScrollMode="never"
+            snapToInterval={CARD + GAP}
+            decelerationRate="fast"
+            onMomentumScrollEnd={tap}
+            contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 8, gap: GAP }}
+            onScroll={Animated.event([{ nativeEvent: { contentOffset: { x } } }], { useNativeDriver: true })}
+            scrollEventThrottle={16}
+            renderItem={({ item, index }) => {
+              const pos = index * (CARD + GAP);
+              const scale = x.interpolate({ inputRange: [pos - CARD, pos, pos + CARD], outputRange: [0.92, 1, 0.92], extrapolate: 'clamp' });
+              return (
+                <Rise index={Math.min(index, 3)} style={{ flex: 1 }}>
+                  <Animated.View style={{ flex: 1, transform: [{ scale }] }}>
+                    <ProCardBig pro={item} width={CARD} />
+                  </Animated.View>
+                </Rise>
+              );
+            }}
+          />
+        )}
+      </View>
     </SafeAreaView>
+  );
+}
+
+const headerBtn = { width: 42, height: 42, borderRadius: 21, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center', ...shadow } as const;
+
+function SectionTitle({ title, action, onAction }: { title: string; action?: string; onAction?: () => void }) {
+  return (
+    <View style={[styles.row, { paddingHorizontal: 20, marginTop: 14, marginBottom: 10 }]}>
+      <Text style={[styles.h3, { flex: 1 }]}>{title}</Text>
+      {action ? (
+        <Pressable onPress={onAction} hitSlop={8} style={styles.row}>
+          <Text style={{ color: C.primary, fontFamily: F.bold, fontSize: 13 }}>{action}</Text>
+          <Ionicons name="chevron-forward" size={15} color={C.primary} />
+        </Pressable>
+      ) : null}
+    </View>
   );
 }

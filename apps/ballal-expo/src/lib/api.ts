@@ -111,6 +111,8 @@ export type Conversation = {
   lastMessageAt: string | null;
   preview: string | null;
   unread: number;
+  otherUserId: string;
+  otherLastReadAt: string | null;
 };
 
 export async function conversations(): Promise<Conversation[]> {
@@ -124,6 +126,8 @@ export async function conversations(): Promise<Conversation[]> {
     lastMessageAt: m.last_message_at ?? null,
     preview: m.last_message_preview ?? null,
     unread: num(m.unread_count),
+    otherUserId: m.other_user_id,
+    otherLastReadAt: m.other_last_read_at ?? null,
   }));
 }
 
@@ -150,4 +154,89 @@ export function timeAgo(iso: string | null): string {
   if (s < 3600) return `${Math.floor(s / 60)} min`;
   if (s < 86400) return `${Math.floor(s / 3600)} h`;
   return `${Math.floor(s / 86400)} j`;
+}
+
+// ═════════════ Messagerie ═════════════
+
+export type ChatMessage = {
+  id: string;
+  conversationId: string;
+  senderId: string;
+  clientId: string | null;
+  type: 'text' | 'image' | 'audio';
+  body: string | null;
+  attachmentPath: string | null;
+  createdAt: string;
+  pending?: boolean;
+  failed?: boolean;
+};
+
+export function toMessage(m: Record<string, any>): ChatMessage {
+  return {
+    id: m.id,
+    conversationId: m.conversation_id,
+    senderId: m.sender_id,
+    clientId: m.client_message_id ?? null,
+    type: m.type ?? 'text',
+    body: m.body ?? null,
+    attachmentPath: m.attachment_path ?? null,
+    createdAt: m.created_at,
+  };
+}
+
+/** Les 100 derniers messages, du plus récent au plus ancien. */
+export async function loadMessages(conversationId: string): Promise<ChatMessage[]> {
+  const { data, error } = await supabase
+    .from('messages')
+    .select('*')
+    .eq('conversation_id', conversationId)
+    .order('created_at', { ascending: false })
+    .limit(100);
+  if (error) throw error;
+  return (data ?? []).map(toMessage);
+}
+
+/** Envoi idempotent (un renvoi après coupure ne crée pas de doublon). */
+export async function sendText(conversationId: string, senderId: string, clientId: string, body: string): Promise<ChatMessage | null> {
+  const { data, error } = await supabase
+    .from('messages')
+    .insert({ conversation_id: conversationId, sender_id: senderId, client_message_id: clientId, type: 'text', body })
+    .select('*')
+    .single();
+  if (error) {
+    if (error.code === '23505') return null;
+    throw error;
+  }
+  return toMessage(data);
+}
+
+export async function markRead(conversationId: string) {
+  await supabase.rpc('mark_conversation_read', { p_conv: conversationId });
+}
+
+export async function signedAttachment(path: string): Promise<string | null> {
+  const { data } = await supabase.storage.from('message-attachments').createSignedUrl(path, 3600);
+  return data?.signedUrl ?? null;
+}
+
+export async function unreadMessages(): Promise<number> {
+  const { data } = await supabase.rpc('get_unread_counts');
+  const row = Array.isArray(data) ? data[0] : data;
+  return num(row?.messages);
+}
+
+export function clock(iso: string): string {
+  const d = new Date(iso);
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
+
+export function dayLabel(iso: string): string {
+  const d = new Date(iso);
+  const today = new Date();
+  const y = new Date();
+  y.setDate(today.getDate() - 1);
+  const same = (a: Date, b: Date) => a.toDateString() === b.toDateString();
+  if (same(d, today)) return 'Aujourd’hui';
+  if (same(d, y)) return 'Hier';
+  return d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
 }
