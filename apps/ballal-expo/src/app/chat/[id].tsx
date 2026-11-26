@@ -10,11 +10,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ProPhoto } from '@/components/ProTile';
 import { Pressy, styles, tap } from '@/components/ui';
 import { clock, conversations, dayLabel, loadMessages, markRead, sendText, signedAttachment, toMessage, type ChatMessage } from '@/lib/api';
+import { gnf, marketPhoto } from '@/lib/market';
 import { useSession } from '@/lib/session';
 import { supabase } from '@/lib/supabase';
 import { C, F, brandGradient } from '@/lib/theme';
 
 const QUICK = ['Bonjour 👋', 'Êtes-vous disponible ?', 'Quel est votre tarif ?', 'Où êtes-vous situé ?'];
+const QUICK_ITEM = ['Bonjour 👋', 'Toujours disponible ?', 'Dernier prix ?', 'On se voit où ?'];
 
 /** Discussion en temps réel : bulles animées, accusés de lecture, « écrit… », envoi instantané. */
 export default function Chat() {
@@ -24,7 +26,12 @@ export default function Chat() {
   const { session } = useSession();
   const me = session?.user.id ?? '';
 
-  const [info, setInfo] = useState({ name: p.name ?? '', avatar: p.avatar || null, pro: p.pro === '1', other: p.other ?? '' });
+  const [info, setInfo] = useState<{ name: string; avatar: string | null; pro: boolean; other: string; listing?: { id: string; title: string; photo: string | null; price: number | null } | null }>({
+    name: p.name ?? '',
+    avatar: p.avatar || null,
+    pro: p.pro === '1',
+    other: p.other ?? '',
+  });
   const [msgs, setMsgs] = useState<ChatMessage[] | null>(null);
   const [fresh, setFresh] = useState<Set<string>>(() => new Set());
   const [otherRead, setOtherRead] = useState<string | null>(null);
@@ -58,7 +65,13 @@ export default function Chat() {
       .then((all) => {
         const c = all.find((x) => x.id === id);
         if (!alive || !c) return;
-        setInfo({ name: c.otherName, avatar: c.otherAvatar, pro: c.otherIsPro, other: c.otherUserId });
+        setInfo({
+          name: c.otherName,
+          avatar: c.otherAvatar,
+          pro: c.otherIsPro,
+          other: c.otherUserId,
+          listing: c.listingId ? { id: c.listingId, title: c.listingTitle ?? 'Article', photo: c.listingPhoto, price: c.listingPrice } : null,
+        });
         setOtherRead(c.otherLastReadAt);
       })
       .catch(() => undefined);
@@ -153,7 +166,7 @@ export default function Chat() {
                 {info.name || 'Discussion'}
               </Text>
               <Text style={{ color: typing ? '#FFD3AE' : 'rgba(255,255,255,0.8)', fontFamily: typing ? F.bold : F.medium, fontSize: 12.5 }}>
-                {typing ? 'écrit…' : info.pro ? 'Professionnel · voir le profil' : 'Client'}
+                {typing ? 'écrit…' : info.pro ? 'Professionnel · voir le profil' : info.listing ? 'Marketplace · à propos d’un article' : 'Client'}
               </Text>
             </View>
           </Pressable>
@@ -163,6 +176,22 @@ export default function Chat() {
             </Pressy>
           ) : null}
         </View>
+        {info.listing ? (
+          <Pressable onPress={() => info.listing && router.push(`/market/${info.listing.id}`)} style={[styles.row, { marginTop: 12, marginHorizontal: 6, backgroundColor: 'rgba(255,255,255,0.14)', borderRadius: 16, padding: 8 }]}>
+            {info.listing.photo ? (
+              <Image source={marketPhoto(info.listing.photo)} style={{ width: 40, height: 40, borderRadius: 10 }} contentFit="cover" />
+            ) : (
+              <View style={{ width: 40, height: 40, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center' }}>
+                <Ionicons name="pricetag" size={18} color="#fff" />
+              </View>
+            )}
+            <View style={{ flex: 1, marginLeft: 10 }}>
+              <Text numberOfLines={1} style={{ color: '#fff', fontFamily: F.bold, fontSize: 13.5 }}>{info.listing.title}</Text>
+              {info.listing.price != null ? <Text style={{ color: '#FFD3AE', fontFamily: F.heavy, fontSize: 12.5 }}>{gnf(info.listing.price)}</Text> : null}
+            </View>
+            <Ionicons name="chevron-forward" size={18} color="#fff" />
+          </Pressable>
+        ) : null}
       </LinearGradient>
 
       {msgs === null ? (
@@ -208,7 +237,7 @@ export default function Chat() {
       {/* Réponses rapides quand la discussion est vide */}
       {msgs !== null && data.length === 0 ? (
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingHorizontal: 14, paddingBottom: 8, justifyContent: 'center' }}>
-          {QUICK.map((q) => (
+          {(info.listing ? QUICK_ITEM : QUICK).map((q) => (
             <Pressy key={q} onPress={() => send(q)} style={{ backgroundColor: '#fff', borderRadius: 18, paddingHorizontal: 14, paddingVertical: 8, borderWidth: 1, borderColor: C.primarySoft }}>
               <Text style={{ fontFamily: F.semibold, color: C.primary, fontSize: 13 }}>{q}</Text>
             </Pressy>

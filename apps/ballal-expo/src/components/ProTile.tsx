@@ -28,8 +28,40 @@ const availability: Record<string, [string, string]> = {
   unavailable: ['Indisponible', C.muted],
 };
 
-export function ProTile({ pro, index = 0 }: { pro: ProCard; index?: number }) {
+export function ProTile({ pro, index = 0, compact = false }: { pro: ProCard; index?: number; compact?: boolean }) {
   const [label, color] = availability[pro.availability] ?? availability.available;
+  if (compact) {
+    return (
+      <FadeIn index={index % 10}>
+        <Card onPress={() => router.push(`/pro/${pro.id}`)} style={{ marginHorizontal: 16, marginVertical: 4, padding: 8, flexDirection: 'row', alignItems: 'center' }}>
+          <ProPhoto path={pro.logoPath} name={pro.displayName} size={54} />
+          <View style={{ flex: 1, marginLeft: 10 }}>
+            <View style={styles.row}>
+              <Text numberOfLines={1} style={{ fontFamily: F.display, fontSize: 14.5, color: C.text, flexShrink: 1 }}>
+                {pro.displayName}
+              </Text>
+              {pro.verified ? <Ionicons name="checkmark-circle" size={15} color={C.primary} style={{ marginLeft: 4 }} /> : null}
+            </View>
+            <Text numberOfLines={1} style={[styles.muted, { fontSize: 12.5, marginTop: 1 }]}>
+              {pro.headline || 'Professionnel BALLAL'}
+            </Text>
+            <View style={[styles.row, { marginTop: 3, gap: 8 }]}>
+              <Ionicons name="star" size={12} color={C.star} />
+              <Text style={{ fontSize: 12, fontFamily: F.bold, color: C.text, marginLeft: -5 }}>
+                {pro.ratingCount > 0 ? pro.ratingAvg.toFixed(1) : 'Nouveau'}
+              </Text>
+              <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: color }} />
+              <Text style={{ fontSize: 11.5, color, fontFamily: F.semibold, marginLeft: -4 }}>{label}</Text>
+              {pro.locationName ? (
+                <Text numberOfLines={1} style={{ fontSize: 11.5, color: C.muted, fontFamily: F.body, flexShrink: 1 }}>· {pro.locationName}</Text>
+              ) : null}
+            </View>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={C.border} />
+        </Card>
+      </FadeIn>
+    );
+  }
   return (
     <FadeIn index={index % 10}>
       <Card onPress={() => router.push(`/pro/${pro.id}`)} style={{ marginHorizontal: 16, marginVertical: 6, padding: 10, flexDirection: 'row' }}>
@@ -122,6 +154,50 @@ export function ProCardBig({ pro, width, height }: { pro: ProCard; width: number
             </View>
           ) : null}
         </View>
+      </View>
+    </Card>
+  );
+}
+
+/** Carte fine du carrousel d'accueil : photo à gauche, infos à droite (hauteur 96). */
+export function ProCardSlim({ pro, width }: { pro: ProCard; width: number }) {
+  const [label, color] = availability[pro.availability] ?? availability.available;
+  return (
+    <Card onPress={() => router.push(`/pro/${pro.id}`)} style={{ width, height: 96, padding: 8, flexDirection: 'row', alignItems: 'center' }}>
+      <View>
+        <ProPhoto path={pro.logoPath} name={pro.displayName} size={80} radius={16} />
+        {pro.isFeatured ? (
+          <LinearGradient colors={['#FF9A3D', C.accent]} style={{ position: 'absolute', left: 4, top: 4, borderRadius: 8, paddingHorizontal: 5, paddingVertical: 1 }}>
+            <Text style={{ fontSize: 9, color: '#fff', fontFamily: F.heavy }}>★ UNE</Text>
+          </LinearGradient>
+        ) : null}
+      </View>
+      <View style={{ flex: 1, marginLeft: 10 }}>
+        <View style={styles.row}>
+          <Text numberOfLines={1} style={{ fontFamily: F.display, fontSize: 14, color: C.text, flexShrink: 1 }}>
+            {pro.displayName}
+          </Text>
+          {pro.verified ? <Ionicons name="checkmark-circle" size={14} color={C.primary} style={{ marginLeft: 3 }} /> : null}
+        </View>
+        <Text numberOfLines={1} style={[styles.muted, { fontSize: 12, marginTop: 1 }]}>
+          {pro.headline || 'Professionnel BALLAL'}
+        </Text>
+        <View style={[styles.row, { marginTop: 6, gap: 8 }]}>
+          <View style={styles.row}>
+            <Ionicons name="star" size={12} color={C.star} />
+            <Text style={{ fontFamily: F.bold, fontSize: 12, marginLeft: 2, color: C.text }}>{pro.ratingCount > 0 ? pro.ratingAvg.toFixed(1) : 'Nouveau'}</Text>
+          </View>
+          <View style={styles.row}>
+            <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: color, marginRight: 3 }} />
+            <Text numberOfLines={1} style={{ fontSize: 11.5, color, fontFamily: F.semibold }}>{label}</Text>
+          </View>
+        </View>
+        {pro.locationName ? (
+          <View style={[styles.row, { marginTop: 2 }]}>
+            <Ionicons name="location" size={11} color={C.primary} />
+            <Text numberOfLines={1} style={{ fontSize: 11.5, color: C.muted, fontFamily: F.medium, marginLeft: 2 }}>{pro.locationName}</Text>
+          </View>
+        ) : null}
       </View>
     </Card>
   );

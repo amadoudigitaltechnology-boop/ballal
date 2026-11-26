@@ -33,6 +33,13 @@
           "imageWidth": 160,
           "backgroundColor": "#FFFFFF"
         }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "BALLAL utilise vos photos pour illustrer les articles que vous vendez.",
+          "cameraPermission": "BALLAL utilise l'appareil photo pour photographier vos articles."
+        }
       ]
     ],
     "scheme": "ballal",

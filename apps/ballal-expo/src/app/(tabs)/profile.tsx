@@ -13,6 +13,7 @@ export default function Profile() {
   const isPro = profile?.roles.includes('professional');
 
   const rows: { icon: keyof typeof Ionicons.glyphMap; label: string; onPress: () => void }[] = [
+    { icon: 'storefront-outline', label: 'Mes annonces (Marketplace)', onPress: () => router.push('/market') },
     { icon: 'lock-closed-outline', label: 'Changer mon mot de passe', onPress: () => router.push('/new-password') },
     { icon: 'settings-outline', label: 'Paramètres', onPress: () => router.push('/settings') },
     {

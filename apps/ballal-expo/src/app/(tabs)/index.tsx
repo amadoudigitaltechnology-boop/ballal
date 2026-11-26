@@ -3,31 +3,27 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, Animated, Dimensions, Pressable, ScrollView, Text, View } from 'react-native';
+import { ActivityIndicator, Dimensions, FlatList, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { ProCardBig } from '@/components/ProTile';
-import { Button, Empty, FadeIn, Logo, Pressy, Rise, styles, tap } from '@/components/ui';
+import { ProTile } from '@/components/ProTile';
+import { Button, FadeIn, Logo, Pressy, Rise, styles } from '@/components/ui';
 import { categoryIcon, families, searchPros, type Category, type ProCard } from '@/lib/api';
 import { useSession } from '@/lib/session';
 import { C, F, brandGradient, people, shadow } from '@/lib/theme';
 
-const { width: W, height: H } = Dimensions.get('window');
-const CARD = Math.round(W * 0.6);
-const GAP = 14;
-const BANNER = Math.round(Math.min(Math.max(H * 0.19, 128), 168));
+const { height: H } = Dimensions.get('window');
+const BANNER = Math.round(Math.min(Math.max(H * 0.16, 128), 150));
 
 /**
  * Accueil « application mobile » : l'écran est fixe et tient en entier (aucun défilement vertical).
- * En-tête · recherche · bannière · catégories (glisser à l'horizontale) · carrousel des pros.
+ * En-tête (chariot Marketplace, réglages) · recherche · bannière · catégories · pros en liste compacte.
  */
 export default function Home() {
   const { profile } = useSession();
   const [cats, setCats] = useState<Category[]>([]);
   const [pros, setPros] = useState<ProCard[] | null>(null);
   const [error, setError] = useState(false);
-  const x = useState(() => new Animated.Value(0))[0];
-  const [areaH, setAreaH] = useState(0);
 
   useFocusEffect(
     useCallback(() => {
@@ -58,6 +54,11 @@ export default function Home() {
           <Text style={{ fontFamily: F.medium, color: C.muted, fontSize: 13 }}>{hello}{first ? ` ${first}` : ''} 👋</Text>
           <Logo height={24} />
         </View>
+        <Pressy onPress={() => router.push('/market')} style={{ marginRight: 10 }}>
+          <LinearGradient colors={['#FF9A3D', C.accent]} style={{ width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', ...shadow }}>
+            <Ionicons name="cart" size={21} color="#fff" />
+          </LinearGradient>
+        </Pressy>
         <Pressy onPress={() => router.push('/settings')} style={headerBtn}>
           <Ionicons name="settings-outline" size={21} color={C.text} />
         </Pressy>
@@ -80,14 +81,14 @@ export default function Home() {
           colors={brandGradient}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
-          style={{ height: BANNER, marginHorizontal: 16, marginTop: 14, borderRadius: 24, overflow: 'hidden', paddingLeft: 18, paddingVertical: 16 }}>
+          style={{ height: BANNER, marginHorizontal: 16, marginTop: 14, borderRadius: 24, overflow: 'hidden', paddingLeft: 18, paddingVertical: 14 }}>
           <View style={{ position: 'absolute', right: -24, bottom: -60, width: BANNER * 1.25, height: BANNER * 1.25, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.12)' }} />
           <View style={{ position: 'absolute', right: 70, top: -30, width: 70, height: 70, borderRadius: 35, backgroundColor: 'rgba(255,122,26,0.55)' }} />
           <Rise style={{ position: 'absolute', right: 4, top: 10, bottom: 0, width: '44%' }}>
             <Image source={people.business} style={{ flex: 1 }} contentFit="contain" contentPosition="bottom" />
           </Rise>
           <View style={{ width: '56%', flex: 1, justifyContent: 'space-between' }}>
-            <Text style={{ color: '#fff', fontFamily: F.displayHeavy, fontSize: 18, lineHeight: 23 }}>Trouvez le meilleur service près de vous</Text>
+            <Text style={{ color: '#fff', fontFamily: F.displayHeavy, fontSize: 17, lineHeight: 22 }}>Le bon pro,{'\n'}près de chez vous</Text>
             <Button label="Découvrir" icon="arrow-forward" variant="accent" onPress={() => router.push('/search')} style={{ alignSelf: 'flex-start' }} />
           </View>
         </LinearGradient>
@@ -117,41 +118,26 @@ export default function Home() {
         ))}
       </ScrollView>
 
-      {/* Carrousel des professionnels : prend toute la place restante */}
+      {/* Professionnels : liste compacte (cartes fines) dans l'espace restant */}
       <SectionTitle title="Professionnels" action="Voir tout" onAction={() => router.push('/search')} />
-      <View style={{ flex: 1, paddingBottom: 86 }} onLayout={(e) => setAreaH(e.nativeEvent.layout.height - 86)}>
+      <View style={{ flex: 1 }}>
         {pros === null ? (
           error ? (
-            <Empty icon="cloud-offline-outline" title="Connexion impossible" text="Vérifiez votre connexion internet." />
+            <Text style={[styles.muted, { marginLeft: 20 }]}>Connexion impossible. Vérifiez internet.</Text>
           ) : (
             <ActivityIndicator color={C.primary} style={{ marginTop: 30 }} />
           )
         ) : pros.length === 0 ? (
-          <Empty icon="people-outline" title="Aucun professionnel publié pour le moment." />
+          <Text style={[styles.muted, { marginLeft: 20 }]}>Aucun professionnel publié pour le moment.</Text>
         ) : (
-          <Animated.FlatList
+          <FlatList
             data={pros}
-            horizontal
             keyExtractor={(p) => p.id}
-            showsHorizontalScrollIndicator={false}
+            showsVerticalScrollIndicator={false}
             overScrollMode="never"
-            snapToInterval={CARD + GAP}
-            decelerationRate="fast"
-            onMomentumScrollEnd={tap}
-            contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 8, gap: GAP }}
-            onScroll={Animated.event([{ nativeEvent: { contentOffset: { x } } }], { useNativeDriver: true })}
-            scrollEventThrottle={16}
-            renderItem={({ item, index }) => {
-              const pos = index * (CARD + GAP);
-              const scale = x.interpolate({ inputRange: [pos - CARD, pos, pos + CARD], outputRange: [0.92, 1, 0.92], extrapolate: 'clamp' });
-              return (
-                <Rise index={Math.min(index, 3)}>
-                  <Animated.View style={{ transform: [{ scale }] }}>
-                    <ProCardBig pro={item} width={CARD} height={Math.max(areaH - 10, 180)} />
-                  </Animated.View>
-                </Rise>
-              );
-            }}
+            bounces={false}
+            contentContainerStyle={{ paddingBottom: 100 }}
+            renderItem={({ item, index }) => <ProTile pro={item} index={index} compact />}
           />
         )}
       </View>

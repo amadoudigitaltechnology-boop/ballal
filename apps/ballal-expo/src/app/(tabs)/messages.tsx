@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
@@ -8,6 +9,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ProPhoto } from '@/components/ProTile';
 import { Empty, FadeIn, Pressy, styles } from '@/components/ui';
 import { conversations, timeAgo, type Conversation } from '@/lib/api';
+import { gnf, marketPhoto } from '@/lib/market';
 import { supabase } from '@/lib/supabase';
 import { C, F, brandGradient, shadow } from '@/lib/theme';
 
@@ -124,6 +126,18 @@ export default function Messages() {
                       </View>
                     ) : null}
                   </View>
+                  {item.listingId ? (
+                    <View style={[styles.row, { marginTop: 3 }]}>
+                      {item.listingPhoto ? (
+                        <Image source={marketPhoto(item.listingPhoto)} style={{ width: 18, height: 18, borderRadius: 5, marginRight: 5 }} contentFit="cover" />
+                      ) : (
+                        <Ionicons name="pricetag" size={13} color={C.accent} style={{ marginRight: 4 }} />
+                      )}
+                      <Text numberOfLines={1} style={{ fontFamily: F.semibold, fontSize: 12, color: C.accent, flexShrink: 1 }}>
+                        {item.listingTitle ?? 'Article'}{item.listingPrice != null ? ` · ${gnf(item.listingPrice)}` : ''}
+                      </Text>
+                    </View>
+                  ) : null}
                   <Text numberOfLines={1} style={{ fontFamily: item.unread ? F.bold : F.body, fontSize: 13.5, color: item.unread ? C.text : C.muted, marginTop: 3 }}>
                     {item.preview ?? 'Démarrez la discussion 👋'}
                   </Text>

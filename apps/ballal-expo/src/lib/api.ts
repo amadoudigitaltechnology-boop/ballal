@@ -113,6 +113,10 @@ export type Conversation = {
   unread: number;
   otherUserId: string;
   otherLastReadAt: string | null;
+  listingId: string | null;
+  listingTitle: string | null;
+  listingPhoto: string | null;
+  listingPrice: number | null;
 };
 
 export async function conversations(): Promise<Conversation[]> {
@@ -128,6 +132,10 @@ export async function conversations(): Promise<Conversation[]> {
     unread: num(m.unread_count),
     otherUserId: m.other_user_id,
     otherLastReadAt: m.other_last_read_at ?? null,
+    listingId: m.listing_id ?? null,
+    listingTitle: m.listing_title ?? null,
+    listingPhoto: m.listing_photo ?? null,
+    listingPrice: m.listing_price_gnf == null ? null : Number(m.listing_price_gnf),
   }));
 }
 
