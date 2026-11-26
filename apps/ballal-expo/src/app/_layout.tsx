@@ -26,6 +26,8 @@ function Guard() {
     if (!ready || !navReady) return;
     const group = segments[0];
     const inAuth = group === '(auth)';
+    // Retour de Google : l'écran login-callback finalise la connexion lui-même.
+    if (group === 'login-callback') return;
     if (!session) {
       const target = onboardingSeen ? '/login' : '/welcome';
       if (!inAuth) router.replace(target);

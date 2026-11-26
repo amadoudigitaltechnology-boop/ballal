@@ -75,7 +75,7 @@ export default function Login() {
         const code = new URL(res.url).searchParams.get('code');
         if (code) {
           const { error: e2 } = await supabase.auth.exchangeCodeForSession(code);
-          if (e2) throw e2;
+          if (e2 && !(await supabase.auth.getSession()).data.session) throw e2;
         }
       }
     } catch (e) {
