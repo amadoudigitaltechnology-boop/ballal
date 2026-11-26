@@ -48,3 +48,10 @@ export function friendlyError(e: unknown): string {
 export function strongPassword(p: string): boolean {
   return p.length >= 8 && /[A-Za-zÀ-ÿ]/.test(p) && /[0-9]/.test(p);
 }
+
+/** Compte créé avec Google sans mot de passe BALLAL : on lui fait créer un mot de passe. */
+export function needsPassword(user: { app_metadata?: Record<string, unknown>; user_metadata?: Record<string, unknown> } | null | undefined): boolean {
+  if (!user) return false;
+  const provider = (user.app_metadata?.provider as string | undefined) ?? 'email';
+  return provider !== 'email' && !user.user_metadata?.password_set;
+}

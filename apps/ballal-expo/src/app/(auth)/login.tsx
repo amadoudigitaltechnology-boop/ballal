@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
+import Constants from 'expo-constants';
 import * as Linking from 'expo-linking';
 import { router } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
@@ -38,7 +39,7 @@ export default function Login() {
     try {
       await AsyncStorage.setItem('last_email', mail);
       if (signup) {
-        const { data, error } = await supabase.auth.signUp({ email: mail, password });
+        const { data, error } = await supabase.auth.signUp({ email: mail, password, options: { data: { password_set: true } } });
         if (error) throw error;
         if (data.user && data.user.identities?.length === 0) throw new Error('already_registered');
         if (!data.session) router.push({ pathname: '/otp', params: { email: mail, mode: 'signup' } });
@@ -64,7 +65,9 @@ export default function Login() {
   const withGoogle = async () => {
     setGoogle(true);
     try {
-      const redirectTo = Linking.createURL('login-callback');
+      // Dans l'APK : adresse de retour déjà autorisée dans Supabase (sinon Supabase renvoie vers « localhost »).
+      const redirectTo =
+        Constants.executionEnvironment === 'storeClient' ? Linking.createURL('login-callback') : 'com.amadoutechnology.ballal://login-callback';
       const { data, error } = await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo, skipBrowserRedirect: true } });
       if (error || !data.url) throw error ?? new Error('oauth');
       const res = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
@@ -168,7 +171,7 @@ export default function Login() {
 
           <Pressy onPress={withGoogle} disabled={google} style={[styles.btn, styles.outline]}>
             <View style={styles.row}>
-              <Text style={{ fontFamily: F.heavy, fontSize: 18, color: '#4285F4', marginRight: 10 }}>G</Text>
+              <Image source={require('../../../assets/google-g.png')} style={{ width: 20, height: 20, marginRight: 10 }} />
               <Text style={{ fontFamily: F.bold, fontSize: 15, color: C.text }}>{google ? 'Ouverture…' : 'Continuer avec Google'}</Text>
             </View>
           </Pressy>

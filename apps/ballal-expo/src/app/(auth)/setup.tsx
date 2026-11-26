@@ -10,24 +10,39 @@ import { C, F } from '@/lib/theme';
 
 const TERMS_VERSION = '2026-11';
 
+/** « Où avez-vous entendu parler de Ballal ? » */
+const SOURCES: { key: string; label: string; icon: keyof typeof Ionicons.glyphMap; color: string }[] = [
+  { key: 'facebook', label: 'Facebook', icon: 'logo-facebook', color: '#1877F2' },
+  { key: 'tiktok', label: 'TikTok', icon: 'logo-tiktok', color: '#111111' },
+  { key: 'instagram', label: 'Instagram', icon: 'logo-instagram', color: '#E1306C' },
+  { key: 'whatsapp', label: 'WhatsApp', icon: 'logo-whatsapp', color: '#25D366' },
+  { key: 'youtube', label: 'YouTube', icon: 'logo-youtube', color: '#FF0000' },
+  { key: 'snapchat', label: 'Snapchat', icon: 'logo-snapchat', color: '#F7C600' },
+  { key: 'linkedin', label: 'LinkedIn', icon: 'logo-linkedin', color: '#0A66C2' },
+  { key: 'x', label: 'X (Twitter)', icon: 'logo-twitter', color: '#111111' },
+  { key: 'friend', label: 'Un proche', icon: 'people', color: C.primary },
+  { key: 'other', label: 'Autre', icon: 'ellipsis-horizontal-circle', color: C.muted },
+];
+
 /** Première connexion : nom, client ou professionnel, conditions — puis « Compte créé avec succès ». */
 export default function Setup() {
   const { session, profile, refresh } = useSession();
   const [name, setName] = useState(profile?.fullName ?? (session?.user.user_metadata?.full_name as string) ?? '');
   const [role, setRole] = useState<'client' | 'professional' | null>(null);
   const [accepted, setAccepted] = useState(false);
+  const [source, setSource] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
   const scale = useState(() => new Animated.Value(0))[0];
 
-  const valid = name.trim().length >= 2 && role && accepted;
+  const valid = name.trim().length >= 2 && role && accepted && source;
 
   const submit = async () => {
     if (!valid || !session) return;
     setLoading(true);
     try {
       const uid = session.user.id;
-      const e1 = (await supabase.from('profiles').update({ full_name: name.trim() }).eq('id', uid)).error;
+      const e1 = (await supabase.from('profiles').update({ full_name: name.trim(), referral_source: source }).eq('id', uid)).error;
       if (e1) throw e1;
       await supabase.from('user_consents').insert([
         { user_id: uid, consent_type: 'terms', policy_version: TERMS_VERSION, granted: true },
@@ -57,6 +72,21 @@ export default function Setup() {
         <Text style={{ fontFamily: F.bold, marginTop: 8 }}>Vous êtes…</Text>
         <RoleCard role={role} setRole={setRole} value="client" icon="search" title="Client" text="Je cherche des professionnels" />
         <RoleCard role={role} setRole={setRole} value="professional" icon="construct" title="Professionnel" text="Je propose mes services" />
+        <Text style={{ fontFamily: F.bold, marginTop: 8 }}>Où avez-vous entendu parler de Ballal ?</Text>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+          {SOURCES.map((o) => {
+            const on = source === o.key;
+            return (
+              <Pressable
+                key={o.key}
+                onPress={() => setSource(o.key)}
+                style={[styles.row, { borderRadius: 20, paddingHorizontal: 12, paddingVertical: 8, borderWidth: 1.5, borderColor: on ? o.color : C.border, backgroundColor: on ? o.color + '14' : '#fff' }]}>
+                <Ionicons name={o.icon} size={17} color={o.color} />
+                <Text style={{ marginLeft: 6, fontFamily: on ? F.bold : F.semibold, fontSize: 13, color: C.text }}>{o.label}</Text>
+              </Pressable>
+            );
+          })}
+        </View>
         <View style={[styles.row, { marginTop: 6 }]}>
           <Switch value={accepted} onValueChange={setAccepted} trackColor={{ true: C.primary }} />
           <Text style={[styles.muted, { flex: 1, marginLeft: 10 }]}>J’accepte les conditions d’utilisation et la politique de confidentialité.</Text>

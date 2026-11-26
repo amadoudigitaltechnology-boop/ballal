@@ -6,6 +6,7 @@ import { useEffect } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { SessionProvider, useSession } from '@/lib/session';
+import { needsPassword } from '@/lib/supabase';
 import { C, fontAssets } from '@/lib/theme';
 
 // Garde l'écran de démarrage natif affiché pendant le chargement des polices.
@@ -33,6 +34,11 @@ function Guard() {
     if (!profile) return; // profil en cours de chargement
     if (needsSetup) {
       if (segments[1] !== 'setup') router.replace('/setup');
+      return;
+    }
+    // Compte Google sans mot de passe : création du mot de passe obligatoire.
+    if (needsPassword(session.user)) {
+      if (segments[1] !== 'new-password') router.replace('/new-password');
       return;
     }
     if (inAuth && segments[1] !== 'new-password') router.replace('/');

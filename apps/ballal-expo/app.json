@@ -42,7 +42,10 @@
         }
       ]
     ],
-    "scheme": "ballal",
+    "scheme": [
+      "ballal",
+      "com.amadoutechnology.ballal"
+    ],
     "experiments": {
       "typedRoutes": true
     }
