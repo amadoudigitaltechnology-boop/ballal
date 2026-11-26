@@ -25,10 +25,10 @@ if "RECORD_AUDIO" not in m:
     m = m.replace("<application", permissions + "    <application", 1)
 if "android.intent.action.DIAL" not in m:
     m = m.replace("</manifest>", queries + "</manifest>")
-m = m.replace('android:label="ballal"', 'android:label="BALLAL"')
+m = m.replace('android:label="ballal"', 'android:label="Ballal"')
 # Sécurité : HTTPS obligatoire, pas de sauvegarde cloud des données de session.
 if "usesCleartextTraffic" not in m:
-    m = m.replace('android:label="BALLAL"', 'android:label="BALLAL"\n        android:usesCleartextTraffic="false"\n        android:allowBackup="false"', 1)
+    m = m.replace('android:label="Ballal"', 'android:label="Ballal"\n        android:usesCleartextTraffic="false"\n        android:allowBackup="false"', 1)
 manifest.write_text(m, encoding="utf-8")
 print("Android : permissions ajoutées")
 
