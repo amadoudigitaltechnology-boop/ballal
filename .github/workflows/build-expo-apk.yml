@@ -1,0 +1,73 @@
+# Fabrique l'APK de la nouvelle application BALLAL (Expo) à chaque modification,
+# sans compte EAS : génération Android (expo prebuild) puis compilation Gradle.
+# La configuration publique vient des secrets GitHub SUPABASE_URL et SUPABASE_ANON_KEY.
+name: APK Expo (nouvelle version)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/ballal-expo/**'
+      - '.github/workflows/build-expo-apk.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: expo-apk
+  cancel-in-progress: true
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    defaults:
+      run:
+        working-directory: apps/ballal-expo
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/ballal-expo/package-lock.json
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Configuration vérifiée (secrets GitHub)
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          python3 ../mobile/tool/write_env.py /tmp/env.json
+          echo "EXPO_PUBLIC_SUPABASE_URL=$SUPABASE_URL" > .env.local
+          echo "EXPO_PUBLIC_SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY" >> .env.local
+
+      - name: Dépendances
+        run: npm ci
+
+      - name: Génération du projet Android
+        run: npx expo prebuild --platform android --no-install --clean
+        env:
+          EXPO_NO_TELEMETRY: 1
+
+      - name: Compilation de l'APK
+        working-directory: apps/ballal-expo/android
+        run: ./gradlew assembleRelease --no-daemon -PreactNativeArchitectures=arm64-v8a,armeabi-v7a
+        env:
+          NODE_ENV: production
+
+      - name: Publier l'APK
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp android/app/build/outputs/apk/release/app-release.apk "BALLAL-nouvelle-version-${{ github.run_number }}.apk"
+          gh release create "expo-build-${{ github.run_number }}" "BALLAL-nouvelle-version-${{ github.run_number }}.apk" \
+            --title "BALLAL nouvelle version (Expo) ${{ github.run_number }}" \
+            --notes "APK de l'application Expo : nouvel accueil, messagerie premium, Marketplace, blindage de sécurité." \
+            --prerelease
