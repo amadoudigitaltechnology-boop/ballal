@@ -42,15 +42,14 @@ export default function Login() {
         const { data, error } = await supabase.auth.signUp({ email: mail, password, options: { data: { password_set: true } } });
         if (error) throw error;
         if (data.user && data.user.identities?.length === 0) throw new Error('already_registered');
-        if (!data.session) router.push({ pathname: '/otp', params: { email: mail, mode: 'signup' } });
+        // Comptes confirmés automatiquement par le serveur : on entre directement, sans code e-mail.
+        if (!data.session) {
+          const { error: e2 } = await supabase.auth.signInWithPassword({ email: mail, password });
+          if (e2) throw e2;
+        }
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email: mail, password });
         if (error) {
-          if (error.message.toLowerCase().includes('not confirmed')) {
-            await supabase.auth.resend({ type: 'signup', email: mail });
-            router.push({ pathname: '/otp', params: { email: mail, mode: 'signup' } });
-            return;
-          }
           throw error;
         }
       }
