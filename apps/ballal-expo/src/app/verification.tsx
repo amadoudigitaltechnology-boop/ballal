@@ -9,7 +9,7 @@ import { useCallback, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Button, Card, FadeIn, styles } from '@/components/ui';
+import { Button, Card, FadeIn, Input, styles } from '@/components/ui';
 import { useSession } from '@/lib/session';
 import { friendlyError, supabase } from '@/lib/supabase';
 import { C, F } from '@/lib/theme';
@@ -20,16 +20,21 @@ type Doc = { id: string; status: 'pending' | 'approved' | 'rejected'; payment_re
 
 const gnf = (n: number) => `${Math.round(n).toLocaleString('fr-FR').replace(/\s/g, ' ')} GNF`;
 
-/** Vérification du compte : pièce d'identité + paiement Djomy (Orange Money, MTN MoMo, carte). */
+/** Vérification du compte : informations sur l'entreprise (RCCM et pièce d'identité facultatifs) + paiement Djomy. */
 export default function Verification() {
   const insets = useSafeAreaInsets();
   const { session } = useSession();
   const uid = session?.user.id ?? '';
   const [doc, setDoc] = useState<Doc | null | undefined>(undefined);
   const [fee, setFee] = useState<number | null>(null);
-  const [docType, setDocType] = useState<'identity' | 'company'>('identity');
+  const docType = 'identity' as const;
   const [photo, setPhoto] = useState<{ uri: string; mime?: string | null } | null>(null);
   const [busy, setBusy] = useState('');
+  const [company, setCompany] = useState('');
+  const [trade, setTrade] = useState('');
+  const [quartier, setQuartier] = useState('');
+  const [years, setYears] = useState('');
+  const [rccm, setRccm] = useState('');
 
   const load = useCallback(async () => {
     const [{ data: d }, { data: s }] = await Promise.all([
@@ -60,17 +65,34 @@ export default function Verification() {
     try {
       let current = doc;
       if (!current || current.status === 'rejected') {
-        if (!photo) return Alert.alert('Ballal', 'Ajoutez d’abord la photo de votre document.');
-        setBusy('Envoi du document…');
-        const body = await (await fetch(photo.uri)).arrayBuffer();
-        if (body.byteLength > 5 * 1024 * 1024) throw new Error('Photo trop lourde (5 Mo maximum).');
-        const type = photo.mime === 'image/png' ? 'image/png' : 'image/jpeg';
-        const path = `${uid}/${Crypto.randomUUID()}.${type === 'image/png' ? 'png' : 'jpg'}`;
-        const up = await supabase.storage.from('verification-docs').upload(path, body, { contentType: type });
-        if (up.error) throw up.error;
+        if (company.trim().length < 2 || trade.trim().length < 2)
+          return Alert.alert('Ballal', 'Indiquez le nom de votre entreprise et votre métier principal.');
+        const rc = rccm.trim();
+        if (rc && !/^[A-Za-z0-9 ./-]{4,40}$/.test(rc)) return Alert.alert('Ballal', 'Le numéro RCCM ne semble pas valide.');
+        setBusy('Envoi de votre demande…');
+        // Photo de la pièce d'identité : facultative.
+        let path: string | null = null;
+        if (photo) {
+          const body = await (await fetch(photo.uri)).arrayBuffer();
+          if (body.byteLength > 5 * 1024 * 1024) throw new Error('Photo trop lourde (5 Mo maximum).');
+          const type = photo.mime === 'image/png' ? 'image/png' : 'image/jpeg';
+          path = `${uid}/${Crypto.randomUUID()}.${type === 'image/png' ? 'png' : 'jpg'}`;
+          const up = await supabase.storage.from('verification-docs').upload(path, body, { contentType: type });
+          if (up.error) throw up.error;
+        }
+        const yrs = parseInt(years, 10);
         const ins = await supabase
           .from('verification_documents')
-          .insert({ user_id: uid, doc_type: docType, storage_path: path })
+          .insert({
+            user_id: uid,
+            doc_type: rc ? 'company' : docType,
+            storage_path: path,
+            company_name: company.trim().slice(0, 120),
+            main_trade: trade.trim().slice(0, 80),
+            quartier: quartier.trim() ? quartier.trim().slice(0, 80) : null,
+            experience_years: Number.isFinite(yrs) ? Math.min(Math.max(yrs, 0), 70) : null,
+            rccm: rc || null,
+          })
           .select('id, status, payment_reference, rejection_reason, doc_type')
           .single();
         if (ins.error) throw ins.error;
@@ -139,7 +161,7 @@ export default function Verification() {
               <Card style={{ alignItems: 'center', padding: 24 }}>
                 <Ionicons name="time" size={64} color={C.accent} />
                 <Text style={[styles.h2, { marginTop: 10, textAlign: 'center' }]}>Paiement reçu, examen en cours</Text>
-                <Text style={[styles.muted, { textAlign: 'center', marginTop: 6 }]}>Notre équipe vérifie votre document sous 48 heures. Vous recevrez une notification.</Text>
+                <Text style={[styles.muted, { textAlign: 'center', marginTop: 6 }]}>Notre équipe examine votre demande sous 48 heures. Vous recevrez une notification.</Text>
               </Card>
             </FadeIn>
           ) : (
@@ -165,31 +187,29 @@ export default function Verification() {
 
               {doc?.status === 'rejected' ? (
                 <Card style={{ padding: 14, backgroundColor: '#FEF2F2' }}>
-                  <Text style={{ fontFamily: F.bold, color: C.danger }}>Document refusé</Text>
-                  <Text style={[styles.muted, { marginTop: 4 }]}>{doc.rejection_reason || 'Envoyez un document plus lisible.'}</Text>
+                  <Text style={{ fontFamily: F.bold, color: C.danger }}>Demande refusée</Text>
+                  <Text style={[styles.muted, { marginTop: 4 }]}>{doc.rejection_reason || 'Corrigez vos informations et renvoyez votre demande.'}</Text>
                 </Card>
               ) : null}
 
               {!doc || doc.status === 'rejected' ? (
                 <FadeIn index={1} style={{ gap: 12 }}>
-                  <Text style={{ fontFamily: F.bold, color: C.text }}>1. Votre document</Text>
-                  <View style={{ flexDirection: 'row', gap: 10 }}>
-                    {(
-                      [
-                        ['identity', 'Pièce d’identité'],
-                        ['company', 'Registre de commerce'],
-                      ] as const
-                    ).map(([k, label]) => (
-                      <Pressable
-                        key={k}
-                        onPress={() => setDocType(k)}
-                        style={{ flex: 1, borderRadius: 16, padding: 12, borderWidth: 1.5, borderColor: docType === k ? C.success : C.border, backgroundColor: docType === k ? '#ECFDF5' : '#fff', alignItems: 'center' }}>
-                        <Text style={{ fontFamily: F.bold, fontSize: 13, color: C.text }}>{label}</Text>
-                      </Pressable>
-                    ))}
-                  </View>
+                  <Text style={{ fontFamily: F.bold, color: C.text }}>1. Votre entreprise</Text>
+                  <Input icon="business-outline" placeholder="Nom de l’entreprise ou nom commercial" value={company} onChangeText={setCompany} maxLength={120} />
+                  <Input icon="construct-outline" placeholder="Métier principal (ex. : électricien)" value={trade} onChangeText={setTrade} maxLength={80} />
+                  <Input icon="location-outline" placeholder="Quartier / commune" value={quartier} onChangeText={setQuartier} maxLength={80} />
+                  <Input icon="time-outline" placeholder="Années d’expérience" value={years} onChangeText={(v) => setYears(v.replace(/\D/g, '').slice(0, 2))} keyboardType="number-pad" />
+                  <Input icon="document-text-outline" placeholder="Numéro RCCM (facultatif)" value={rccm} onChangeText={setRccm} maxLength={40} autoCapitalize="characters" />
+
+                  <Text style={{ fontFamily: F.bold, color: C.text, marginTop: 4 }}>Photo de la pièce d’identité (facultatif)</Text>
+                  <Text style={[styles.muted, { fontSize: 12.5, marginTop: -6 }]}>Recommandé : la vérification est plus rapide avec une pièce d’identité.</Text>
                   {photo ? (
-                    <Image source={photo.uri} style={{ width: '100%', height: 190, borderRadius: 18 }} contentFit="cover" />
+                    <View>
+                      <Image source={photo.uri} style={{ width: '100%', height: 170, borderRadius: 18 }} contentFit="cover" />
+                      <Pressable onPress={() => setPhoto(null)} style={{ position: 'absolute', right: 10, top: 10, backgroundColor: 'rgba(0,0,0,0.55)', borderRadius: 14, padding: 6 }}>
+                        <Ionicons name="close" size={16} color="#fff" />
+                      </Pressable>
+                    </View>
                   ) : null}
                   <View style={{ flexDirection: 'row', gap: 10 }}>
                     <Button label="Prendre en photo" icon="camera-outline" variant="outline" onPress={() => pick(true)} style={{ flex: 1 }} />
@@ -198,7 +218,7 @@ export default function Verification() {
                   <Text style={{ fontFamily: F.bold, color: C.text, marginTop: 4 }}>2. Paiement sécurisé</Text>
                 </FadeIn>
               ) : (
-                <Text style={{ fontFamily: F.bold, color: C.text }}>Document reçu. Il reste le paiement.</Text>
+                <Text style={{ fontFamily: F.bold, color: C.text }}>Demande reçue. Il reste le paiement.</Text>
               )}
 
               <View style={[styles.row, { gap: 8, justifyContent: 'center' }]}>

@@ -44,20 +44,10 @@ Deno.serve(async (req) => {
   const user = auth?.user;
   if (!user) return json(401, { error: "unauthorized" });
 
-  let verificationId: string | undefined;
+  let input: { verification_id?: string; purpose?: string; days?: number } = {};
   try {
-    verificationId = (await req.json())?.verification_id;
+    input = (await req.json()) ?? {};
   } catch { /* corps invalide */ }
-  if (!verificationId || !/^[0-9a-f-]{36}$/i.test(verificationId)) return json(400, { error: "bad_request" });
-
-  // La demande de vérification doit appartenir à l'utilisateur, être en attente et non payée.
-  const { data: doc } = await supa
-    .from("verification_documents")
-    .select("id, user_id, status, payment_reference")
-    .eq("id", verificationId)
-    .maybeSingle();
-  if (!doc || doc.user_id !== user.id || doc.status !== "pending") return json(404, { error: "verification_not_found" });
-  if (doc.payment_reference) return json(409, { error: "already_paid" });
 
   // Plafond : 10 tentatives de paiement par heure.
   const since = new Date(Date.now() - 3600_000).toISOString();
@@ -67,13 +57,41 @@ Deno.serve(async (req) => {
     return json(429, { error: "rate_limited" });
   }
 
-  const { data: fee } = await supa.from("app_settings").select("value").eq("key", "verification_fee_gnf").maybeSingle();
-  const amount = Number(fee?.value);
-  if (!Number.isFinite(amount) || amount <= 0) return json(503, { error: "fee_not_configured" });
+  let row: Record<string, unknown>;
+  let amount: number;
+  let description: string;
+
+  if (input.purpose === "boost") {
+    // Sponsorisation : réservée aux pros ; le prix vient de la grille « boost_plans » des réglages.
+    const { data: pro } = await supa.from("professional_profiles").select("user_id").eq("user_id", user.id).maybeSingle();
+    if (!pro) return json(403, { error: "not_professional" });
+    const { data: plans } = await supa.from("app_settings").select("value").eq("key", "boost_plans").maybeSingle();
+    const plan = (Array.isArray(plans?.value) ? plans!.value : []).find((p: { days: number }) => p.days === Number(input.days));
+    if (!plan || !(Number(plan.price_gnf) > 0)) return json(400, { error: "bad_plan" });
+    amount = Number(plan.price_gnf);
+    description = `Sponsorisation Ballal ${plan.days} jours`;
+    row = { user_id: user.id, purpose: "boost", boost_days: plan.days, amount_gnf: amount };
+  } else {
+    const verificationId = input.verification_id;
+    if (!verificationId || !/^[0-9a-f-]{36}$/i.test(verificationId)) return json(400, { error: "bad_request" });
+    // La demande de vérification doit appartenir à l'utilisateur, être en attente et non payée.
+    const { data: doc } = await supa
+      .from("verification_documents")
+      .select("id, user_id, status, payment_reference")
+      .eq("id", verificationId)
+      .maybeSingle();
+    if (!doc || doc.user_id !== user.id || doc.status !== "pending") return json(404, { error: "verification_not_found" });
+    if (doc.payment_reference) return json(409, { error: "already_paid" });
+    const { data: fee } = await supa.from("app_settings").select("value").eq("key", "verification_fee_gnf").maybeSingle();
+    amount = Number(fee?.value);
+    if (!Number.isFinite(amount) || amount <= 0) return json(503, { error: "fee_not_configured" });
+    description = "Vérification du compte Ballal";
+    row = { user_id: user.id, purpose: "verification", verification_id: verificationId, amount_gnf: amount };
+  }
 
   const { data: pay, error: insErr } = await supa
     .from("payments")
-    .insert({ user_id: user.id, purpose: "verification", verification_id: verificationId, amount_gnf: amount })
+    .insert(row)
     .select("id")
     .single();
   if (insErr || !pay) return json(500, { error: "payment_create_failed" });
@@ -86,7 +104,7 @@ Deno.serve(async (req) => {
       body: JSON.stringify({
         amount,
         countryCode: "GN",
-        description: "Vérification du compte Ballal",
+        description,
         merchantPaymentReference: pay.id,
         returnUrl: back,
         cancelUrl: `${back}&cancel=1`,

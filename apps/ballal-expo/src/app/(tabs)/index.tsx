@@ -10,6 +10,7 @@ import { ProTile } from '@/components/ProTile';
 import { Button, FadeIn, Logo, Pressy, Rise, styles } from '@/components/ui';
 import { categoryIcon, families, searchPros, type Category, type ProCard } from '@/lib/api';
 import { useSession } from '@/lib/session';
+import { supabase } from '@/lib/supabase';
 import { C, F, brandGradient, people, shadow } from '@/lib/theme';
 
 const { height: H } = Dimensions.get('window');
@@ -20,7 +21,27 @@ const BANNER = Math.round(Math.min(Math.max(H * 0.16, 128), 150));
  * En-tête (chariot Marketplace, réglages) · recherche · bannière · catégories · pros en liste compacte.
  */
 export default function Home() {
-  const { profile } = useSession();
+  const { profile, session } = useSession();
+  const isPro = !!profile?.roles.includes('professional');
+  const [needVerify, setNeedVerify] = useState(false);
+
+  // Pro non vérifié (et sans demande en cours) : bandeau d'invitation à chaque ouverture.
+  useFocusEffect(
+    useCallback(() => {
+      const uid = session?.user.id;
+      if (!isPro || !uid) return;
+      let alive = true;
+      Promise.all([
+        supabase.from('professional_profiles').select('identity_verified, company_verified').eq('user_id', uid).maybeSingle(),
+        supabase.from('verification_documents').select('id').eq('user_id', uid).eq('status', 'pending').limit(1),
+      ])
+        .then(([{ data: p }, { data: d }]) => alive && setNeedVerify(!!p && !p.identity_verified && !p.company_verified && !(d?.length ?? 0)))
+        .catch(() => undefined);
+      return () => {
+        alive = false;
+      };
+    }, [isPro, session?.user.id]),
+  );
   const [cats, setCats] = useState<Category[]>([]);
   const [pros, setPros] = useState<ProCard[] | null>(null);
   const [error, setError] = useState(false);
@@ -74,6 +95,18 @@ export default function Home() {
           </LinearGradient>
         </View>
       </Pressy>
+
+      {needVerify ? (
+        <Pressy onPress={() => router.push('/verification')} style={{ marginHorizontal: 16, marginTop: 10 }}>
+          <LinearGradient colors={['#10B981', '#057A55']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={[styles.row, { borderRadius: 16, paddingHorizontal: 14, paddingVertical: 10 }]}>
+            <Ionicons name="shield-checkmark" size={20} color="#fff" />
+            <Text numberOfLines={1} style={{ flex: 1, marginLeft: 10, color: '#fff', fontFamily: F.bold, fontSize: 13 }}>
+              Vérifiez votre compte pour être recommandé
+            </Text>
+            <Ionicons name="chevron-forward" size={18} color="#fff" />
+          </LinearGradient>
+        </Pressy>
+      ) : null}
 
       {/* Bannière : homme détouré, jamais rogné */}
       <FadeIn index={1}>

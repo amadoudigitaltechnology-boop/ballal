@@ -223,21 +223,22 @@ async function loadVerif() {
   const box = $('tab-verif');
   box.innerHTML = '<p class="muted">Chargement…</p>';
   const { data, error } = await sb.from('verification_documents')
-    .select('id, user_id, doc_type, storage_path, status, created_at, payment_reference, payment_method, amount_gnf, profiles!verification_documents_user_id_fkey(full_name)')
+    .select('id, user_id, doc_type, storage_path, status, created_at, payment_reference, payment_method, amount_gnf, company_name, main_trade, quartier, experience_years, rccm, profiles!verification_documents_user_id_fkey(full_name)')
     .eq('status', 'pending').order('created_at');
   if (error) return (box.innerHTML = `<p class="err">${esc(friendly(error))}</p>`);
-  if (!data.length) return (box.innerHTML = '<div class="card">Aucune vérification en attente. ✅</div>');
+  if (!data.length) return (box.innerHTML = '<div class="card">Aucune vérification en attente.</div>');
   box.innerHTML = '';
   for (const d of data) {
-    const { data: signed } = await sb.storage.from('verification-docs').createSignedUrl(d.storage_path, 600);
+    const { data: signed } = d.storage_path ? await sb.storage.from('verification-docs').createSignedUrl(d.storage_path, 600) : { data: null };
     const el = document.createElement('div');
     el.className = 'card';
     el.innerHTML = `<div class="row" style="justify-content:space-between">
         <div><b>${esc(d.profiles?.full_name || 'Sans nom')}</b> · <span class="tag">${d.doc_type === 'identity' ? "Pièce d'identité" : "Document d'entreprise"}</span>
         <div class="muted">Envoyé le ${date(d.created_at)}</div>
+        ${d.company_name ? `<div style="margin-top:4px"><b>${esc(d.company_name)}</b> · ${esc(d.main_trade || '')}${d.quartier ? ' · ' + esc(d.quartier) : ''}${d.experience_years != null ? ' · ' + esc(String(d.experience_years)) + ' ans d\'expérience' : ''}${d.rccm ? ' · RCCM ' + esc(d.rccm) : ''}</div>` : ''}
         <div style="margin-top:4px">${d.payment_reference ? `<span class="tag ok">Paiement : ${esc(d.payment_reference)}${d.amount_gnf ? ' · ' + Number(d.amount_gnf).toLocaleString('fr-FR') + ' GNF' : ''}</span> <span class="muted">→ vérifiez la réception sur votre téléphone avant d'accepter</span>` : '<span class="tag warn">Aucune référence de paiement</span>'}</div></div>
         <div class="row"><button class="btn sm ok">Accepter</button><button class="btn sm ko">Refuser</button></div></div>
-      ${signed?.signedUrl ? `<p><a href="${signed.signedUrl}" target="_blank" rel="noopener"><img class="doc" src="${signed.signedUrl}" alt="Document"></a></p>` : '<p class="err">Document illisible</p>'}`;
+      ${signed?.signedUrl ? `<p><a href="${signed.signedUrl}" target="_blank" rel="noopener"><img class="doc" src="${signed.signedUrl}" alt="Document"></a></p>` : (d.storage_path ? '<p class="err">Document illisible</p>' : '<p class="muted">Pas de pièce d\'identité (facultative)</p>')}`;
     const [ok, ko] = el.querySelectorAll('button');
     ok.onclick = () => review(d.id, 'approved', null, el);
     ko.onclick = () => { const r = prompt('Motif du refus (envoyé au professionnel) :', 'Photo floue ou incomplète'); if (r !== null) review(d.id, 'rejected', r, el); };

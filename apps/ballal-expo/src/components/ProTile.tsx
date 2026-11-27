@@ -41,6 +41,11 @@ export function ProTile({ pro, index = 0, compact = false }: { pro: ProCard; ind
                 {pro.displayName}
               </Text>
               {pro.verified ? <Ionicons name="checkmark-circle" size={15} color={C.primary} style={{ marginLeft: 4 }} /> : null}
+              {pro.isFeatured ? (
+                <View style={{ marginLeft: 6, backgroundColor: C.accentSoft, borderRadius: 8, paddingHorizontal: 6, paddingVertical: 1 }}>
+                  <Text style={{ color: C.accent, fontFamily: F.heavy, fontSize: 9.5 }}>Sponsorisé</Text>
+                </View>
+              ) : null}
             </View>
             <Text numberOfLines={1} style={[styles.muted, { fontSize: 12.5, marginTop: 1 }]}>
               {pro.headline || 'Professionnel BALLAL'}
@@ -126,7 +131,7 @@ export function ProCardBig({ pro, width, height }: { pro: ProCard; width: number
         </View>
         {pro.isFeatured ? (
           <LinearGradient colors={['#FF9A3D', C.accent]} style={{ position: 'absolute', right: 10, top: 10, borderRadius: 20, paddingHorizontal: 9, paddingVertical: 4 }}>
-            <Text style={{ fontSize: 10.5, color: '#fff', fontFamily: F.heavy }}>À LA UNE</Text>
+            <Text style={{ fontSize: 10.5, color: '#fff', fontFamily: F.heavy }}>SPONSORISÉ</Text>
           </LinearGradient>
         ) : null}
       </View>
@@ -168,7 +173,7 @@ export function ProCardSlim({ pro, width }: { pro: ProCard; width: number }) {
         <ProPhoto path={pro.logoPath} name={pro.displayName} size={80} radius={16} />
         {pro.isFeatured ? (
           <LinearGradient colors={['#FF9A3D', C.accent]} style={{ position: 'absolute', left: 4, top: 4, borderRadius: 8, paddingHorizontal: 5, paddingVertical: 1 }}>
-            <Text style={{ fontSize: 9, color: '#fff', fontFamily: F.heavy }}>À LA UNE</Text>
+            <Text style={{ fontSize: 9, color: '#fff', fontFamily: F.heavy }}>SPONSORISÉ</Text>
           </LinearGradient>
         ) : null}
       </View>
