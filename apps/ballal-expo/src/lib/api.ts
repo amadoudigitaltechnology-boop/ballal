@@ -278,3 +278,19 @@ export function dayLabel(iso: string): string {
   if (same(d, y)) return 'Hier';
   return d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
 }
+
+/** Paiement Djomy : renvoie l'URL de paiement, ou un message clair si c'est impossible. */
+export async function startPayment(body: Record<string, unknown>): Promise<{ redirect_url: string; payment_id: string }> {
+  const { data, error } = await supabase.functions.invoke('djomy-pay', { body });
+  if (!error && data?.redirect_url) return data as { redirect_url: string; payment_id: string };
+  let code = (data as { error?: string } | null)?.error;
+  const ctx = (error as { context?: Response } | null)?.context;
+  if (!code && ctx && typeof ctx.json === 'function') code = (await ctx.json().catch(() => null))?.error;
+  const messages: Record<string, string> = {
+    payment_not_configured: 'Le paiement en ligne n’est pas encore activé. Réessayez plus tard.',
+    country_not_supported: 'Le paiement en ligne n’est pas encore disponible dans votre pays. Contactez le support.',
+    rate_limited: 'Trop de tentatives. Réessayez dans une heure.',
+    already_paid: 'Ce paiement a déjà été effectué.',
+  };
+  throw new Error(messages[code ?? ''] ?? 'Paiement indisponible pour le moment. Réessayez.');
+}

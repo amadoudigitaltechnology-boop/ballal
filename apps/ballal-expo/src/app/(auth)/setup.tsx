@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Alert, Animated, Modal, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -11,6 +11,8 @@ import { C, F } from '@/lib/theme';
 const TERMS_VERSION = '2026-11';
 
 /** « Où avez-vous entendu parler de Ballal ? » */
+type Country = { code: string; name: string; dial_code: string };
+
 const SOURCES: { key: string; label: string; icon: keyof typeof Ionicons.glyphMap; color: string }[] = [
   { key: 'facebook', label: 'Facebook', icon: 'logo-facebook', color: '#1877F2' },
   { key: 'tiktok', label: 'TikTok', icon: 'logo-tiktok', color: '#111111' },
@@ -34,6 +36,18 @@ export default function Setup() {
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
   const [step, setStep] = useState<1 | 2>(1);
+  const [countries, setCountries] = useState<Country[]>([]);
+  const [country, setCountry] = useState('GN');
+  const [picker, setPicker] = useState(false);
+
+  useEffect(() => {
+    supabase
+      .from('countries')
+      .select('code, name, dial_code')
+      .order('sort')
+      .then(({ data }) => setCountries((data as Country[]) ?? []));
+  }, []);
+  const countryName = countries.find((c) => c.code === country)?.name ?? 'Guinée';
   const scale = useState(() => new Animated.Value(0))[0];
 
   const step1Ok = name.trim().length >= 2 && !!role;
@@ -44,7 +58,9 @@ export default function Setup() {
     setLoading(true);
     try {
       const uid = session.user.id;
-      const e1 = (await supabase.from('profiles').update({ full_name: name.trim(), referral_source: source }).eq('id', uid)).error;
+      const patch: Record<string, unknown> = { full_name: name.trim(), referral_source: source };
+      if (countries.length) patch.country_code = country; // colonne présente dès que la liste des pays existe
+      const e1 = (await supabase.from('profiles').update(patch).eq('id', uid)).error;
       if (e1) throw e1;
       await supabase.from('user_consents').insert([
         { user_id: uid, consent_type: 'terms', policy_version: TERMS_VERSION, granted: true },
@@ -54,6 +70,8 @@ export default function Setup() {
       if (e3) throw e3;
       setDone(true);
       Animated.spring(scale, { toValue: 1, useNativeDriver: true, bounciness: 12 }).start();
+      // On ferme la fenêtre de succès AVANT de changer d'écran (sinon plantage Android).
+      setTimeout(() => setDone(false), 2200);
       setTimeout(() => refresh(), 2600);
     } catch (e) {
       Alert.alert('BALLAL', friendlyError(e));
@@ -86,6 +104,16 @@ export default function Setup() {
             </View>
             <Text style={{ fontFamily: F.bold, marginTop: 4 }}>Nom complet</Text>
             <Input icon="person-outline" placeholder="Ex. : Mamadou Diallo" value={name} onChangeText={setName} autoCapitalize="words" />
+            {countries.length ? (
+              <>
+                <Text style={{ fontFamily: F.bold, marginTop: 4 }}>Votre pays</Text>
+                <Pressable onPress={() => setPicker(true)} style={[styles.row, { backgroundColor: C.field, borderRadius: 18, height: 52, paddingHorizontal: 16 }]}>
+                  <Ionicons name="earth-outline" size={20} color={C.muted} />
+                  <Text style={{ flex: 1, marginLeft: 10, fontFamily: F.semibold, fontSize: 15, color: C.text }}>{countryName}</Text>
+                  <Ionicons name="chevron-down" size={18} color={C.muted} />
+                </Pressable>
+              </>
+            ) : null}
             <Text style={{ fontFamily: F.bold, marginTop: 4 }}>Vous êtes…</Text>
             <RoleCard role={role} setRole={setRole} value="client" icon="search" title="Client" text="Je cherche des professionnels" />
             <RoleCard role={role} setRole={setRole} value="professional" icon="construct" title="Professionnel" text="Je propose mes services" />
@@ -122,6 +150,34 @@ export default function Setup() {
           </FadeIn>
         )}
       </ScrollView>
+
+      <Modal visible={picker} transparent animationType="slide" onRequestClose={() => setPicker(false)}>
+        <Pressable style={{ flex: 1, backgroundColor: 'rgba(15,23,42,0.45)' }} onPress={() => setPicker(false)} />
+        <View style={{ backgroundColor: '#fff', borderTopLeftRadius: 28, borderTopRightRadius: 28, maxHeight: '75%', paddingTop: 10 }}>
+          <View style={{ alignSelf: 'center', width: 44, height: 5, borderRadius: 3, backgroundColor: C.border, marginBottom: 8 }} />
+          <Text style={[styles.h3, { marginLeft: 20, marginBottom: 6 }]}>Choisissez votre pays</Text>
+          <ScrollView contentContainerStyle={{ paddingBottom: 30 }}>
+            {countries.map((c) => {
+              const on = c.code === country;
+              return (
+                <Pressable
+                  key={c.code}
+                  onPress={() => {
+                    setCountry(c.code);
+                    setPicker(false);
+                  }}
+                  style={[styles.row, { paddingHorizontal: 20, paddingVertical: 14, backgroundColor: on ? C.primarySoft : '#fff' }]}>
+                  <View style={{ width: 40, height: 28, borderRadius: 8, backgroundColor: on ? C.primary : C.field, alignItems: 'center', justifyContent: 'center' }}>
+                    <Text style={{ fontFamily: F.heavy, fontSize: 12, color: on ? '#fff' : C.muted }}>{c.code}</Text>
+                  </View>
+                  <Text style={{ flex: 1, marginLeft: 12, fontFamily: on ? F.bold : F.semibold, fontSize: 15, color: C.text }}>{c.name}</Text>
+                  <Text style={[styles.muted, { fontSize: 13 }]}>{c.dial_code}</Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        </View>
+      </Modal>
 
       <Modal visible={done} transparent animationType="fade">
         <View style={{ flex: 1, backgroundColor: 'rgba(11,42,111,0.55)', alignItems: 'center', justifyContent: 'center', padding: 32 }}>

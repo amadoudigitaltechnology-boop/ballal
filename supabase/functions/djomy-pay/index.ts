@@ -44,6 +44,10 @@ Deno.serve(async (req) => {
   const user = auth?.user;
   if (!user) return json(401, { error: "unauthorized" });
 
+  // Djomy : paiement en ligne disponible en Guinée uniquement pour le moment.
+  const { data: prof } = await supa.from("profiles").select("country_code").eq("id", user.id).maybeSingle();
+  if (prof?.country_code && prof.country_code !== "GN") return json(403, { error: "country_not_supported" });
+
   let input: { verification_id?: string; purpose?: string; days?: number } = {};
   try {
     input = (await req.json()) ?? {};

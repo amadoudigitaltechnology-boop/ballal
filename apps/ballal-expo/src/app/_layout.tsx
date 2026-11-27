@@ -3,6 +3,7 @@ import { Stack, useRootNavigationState, useRouter, useSegments } from 'expo-rout
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
+import { Pressable, Text, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { SessionProvider, useSession } from '@/lib/session';
@@ -77,5 +78,19 @@ export default function RootLayout() {
         <Guard />
       </SessionProvider>
     </SafeAreaProvider>
+  );
+}
+
+/** Filet de sécurité : une erreur affiche cet écran au lieu de fermer l'application. */
+export function ErrorBoundary({ error, retry }: { error: Error; retry: () => Promise<void> }) {
+  return (
+    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 28, backgroundColor: '#fff' }}>
+      <Text style={{ fontSize: 20, fontWeight: '800', color: '#0F172A', textAlign: 'center' }}>Oups, un souci est survenu</Text>
+      <Text style={{ marginTop: 10, color: '#64748B', textAlign: 'center' }}>Touchez « Réessayer ». Si le problème revient, envoyez une capture de cet écran au support.</Text>
+      <Text selectable style={{ marginTop: 14, color: '#94A3B8', fontSize: 12, textAlign: 'center' }}>{String(error?.message ?? error).slice(0, 300)}</Text>
+      <Pressable onPress={retry} style={{ marginTop: 22, backgroundColor: '#1A56DB', paddingHorizontal: 28, paddingVertical: 14, borderRadius: 24 }}>
+        <Text style={{ color: '#fff', fontWeight: '800' }}>Réessayer</Text>
+      </Pressable>
+    </View>
   );
 }

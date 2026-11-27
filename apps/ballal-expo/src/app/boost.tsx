@@ -7,6 +7,7 @@ import { ActivityIndicator, Alert, Pressable, ScrollView, Text, View } from 'rea
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button, Card, FadeIn, styles } from '@/components/ui';
+import { startPayment } from '@/lib/api';
 import { useSession } from '@/lib/session';
 import { supabase } from '@/lib/supabase';
 import { C, F } from '@/lib/theme';
@@ -45,11 +46,7 @@ export default function Boost() {
   const pay = async () => {
     try {
       setBusy('Ouverture du paiement…');
-      const { data, error } = await supabase.functions.invoke('djomy-pay', { body: { purpose: 'boost', days: choice } });
-      if (error || !data?.redirect_url) {
-        const code = (data as { error?: string } | null)?.error;
-        throw new Error(code === 'payment_not_configured' ? 'Le paiement en ligne sera disponible très bientôt.' : 'Paiement indisponible pour le moment. Réessayez.');
-      }
+      const data = await startPayment({ purpose: 'boost', days: choice });
       setBusy('Paiement en cours…');
       await WebBrowser.openAuthSessionAsync(data.redirect_url as string, RETURN_URL);
       setBusy('Vérification du paiement…');

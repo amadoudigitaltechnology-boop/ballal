@@ -21,7 +21,6 @@ export default function Login() {
   const [signup, setSignup] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [confirm, setConfirm] = useState('');
   const [loading, setLoading] = useState(false);
   const [google, setGoogle] = useState(false);
 
@@ -34,7 +33,6 @@ export default function Login() {
     if (!/^\S+@\S+\.\S+$/.test(mail)) return Alert.alert('E-mail invalide', 'Vérifiez votre adresse e-mail.');
     if (password.length < 8 || (signup && !strongPassword(password)))
       return Alert.alert('Mot de passe', '8 caractères minimum, avec au moins une lettre et un chiffre.');
-    if (signup && password !== confirm) return Alert.alert('Mot de passe', 'Les deux mots de passe ne sont pas identiques.');
     setLoading(true);
     try {
       await AsyncStorage.setItem('last_email', mail);
@@ -108,26 +106,27 @@ export default function Login() {
           </View>
         </View>
 
-        <FadeIn index={1} style={{ paddingHorizontal: 24, paddingTop: 10 }}>
-          <Text style={[styles.h1, { fontSize: 28 }]}>Bienvenue !</Text>
+        <FadeIn index={1} style={{ paddingHorizontal: 24, paddingTop: 12 }}>
+          <Text style={[styles.h1, { fontSize: 28 }]}>{signup ? 'Créez votre compte' : 'Bon retour !'}</Text>
           <Text style={[styles.muted, { fontSize: 14, marginTop: 2 }]}>
-            {signup ? 'Créez votre compte en 1 minute.' : 'Connectez-vous pour continuer.'}
+            {signup ? 'Gratuit, en moins d’une minute.' : 'Connectez-vous pour continuer.'}
           </Text>
 
-          {/* Bascule Se connecter / Créer un compte */}
-          <View style={{ flexDirection: 'row', backgroundColor: C.field, borderRadius: 16, padding: 4, marginTop: 14 }}>
-            {[false, true].map((s) => (
-              <Pressable key={String(s)} style={{ flex: 1 }} onPress={() => setSignup(s)}>
-                <View style={{ paddingVertical: 11, borderRadius: 12, backgroundColor: signup === s ? '#fff' : 'transparent' }}>
-                  <Text style={{ textAlign: 'center', fontFamily: F.heavy, color: signup === s ? C.primary : C.muted }}>
-                    {s ? 'Créer un compte' : 'Se connecter'}
-                  </Text>
-                </View>
-              </Pressable>
-            ))}
+          {/* 1 toucher : Google */}
+          <Pressy onPress={withGoogle} disabled={google} style={{ marginTop: 16 }}>
+            <View style={[styles.row, { justifyContent: 'center', height: 54, borderRadius: 27, backgroundColor: '#fff', borderWidth: 1.5, borderColor: C.border, shadowColor: '#0B2A6F', shadowOpacity: 0.08, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 3 }]}>
+              <Image source={require('../../../assets/google-g.png')} style={{ width: 22, height: 22, marginRight: 12 }} />
+              <Text style={{ fontFamily: F.bold, fontSize: 15.5, color: C.text }}>{google ? 'Ouverture…' : 'Continuer avec Google'}</Text>
+            </View>
+          </Pressy>
+
+          <View style={[styles.row, { marginVertical: 14 }]}>
+            <View style={{ flex: 1, height: 1, backgroundColor: C.border }} />
+            <Text style={[styles.muted, { marginHorizontal: 12, fontSize: 13 }]}>ou avec votre e-mail</Text>
+            <View style={{ flex: 1, height: 1, backgroundColor: C.border }} />
           </View>
 
-          <View style={{ gap: 10, marginTop: 14 }}>
+          <View style={{ gap: 10 }}>
             <Input
               icon="at"
               placeholder="Adresse e-mail"
@@ -140,16 +139,13 @@ export default function Login() {
             />
             <Input
               icon="lock-closed-outline"
-              placeholder={signup ? 'Mot de passe (8 caractères min.)' : 'Mot de passe'}
+              placeholder={signup ? 'Créez un mot de passe (8 caractères min.)' : 'Mot de passe'}
               value={password}
               onChangeText={setPassword}
               secure
               autoComplete={signup ? 'new-password' : 'current-password'}
               textContentType={signup ? 'newPassword' : 'password'}
             />
-            {signup ? (
-              <Input icon="lock-open-outline" placeholder="Confirmer le mot de passe" value={confirm} onChangeText={setConfirm} secure />
-            ) : null}
           </View>
 
           {!signup ? (
@@ -157,26 +153,20 @@ export default function Login() {
               <Text style={{ color: C.primary, fontFamily: F.bold }}>Mot de passe oublié ?</Text>
             </Pressable>
           ) : (
-            <View style={{ height: 14 }} />
+            <Text style={[styles.muted, { fontSize: 12, marginTop: 6, marginBottom: 10 }]}>Au moins une lettre et un chiffre.</Text>
           )}
 
-          <Button label={signup ? 'Créer un compte' : 'Se connecter'} icon="arrow-forward" onPress={submit} loading={loading} />
+          <Button label={signup ? 'Créer mon compte' : 'Se connecter'} icon="arrow-forward" onPress={submit} loading={loading} />
 
-          <View style={[styles.row, { marginVertical: 12 }]}>
-            <View style={{ flex: 1, height: 1, backgroundColor: C.border }} />
-            <Text style={[styles.muted, { marginHorizontal: 12 }]}>ou</Text>
-            <View style={{ flex: 1, height: 1, backgroundColor: C.border }} />
-          </View>
+          <Pressable onPress={() => setSignup(!signup)} style={{ alignSelf: 'center', paddingVertical: 14 }}>
+            <Text style={{ fontFamily: F.medium, color: C.muted, fontSize: 14 }}>
+              {signup ? 'Déjà un compte ? ' : 'Pas encore de compte ? '}
+              <Text style={{ color: C.primary, fontFamily: F.heavy }}>{signup ? 'Se connecter' : 'Créer un compte'}</Text>
+            </Text>
+          </Pressable>
 
-          <Pressy onPress={withGoogle} disabled={google} style={[styles.btn, styles.outline]}>
-            <View style={styles.row}>
-              <Image source={require('../../../assets/google-g.png')} style={{ width: 20, height: 20, marginRight: 10 }} />
-              <Text style={{ fontFamily: F.bold, fontSize: 15, color: C.text }}>{google ? 'Ouverture…' : 'Continuer avec Google'}</Text>
-            </View>
-          </Pressy>
-
-          <Text style={[styles.muted, { fontSize: 12, textAlign: 'center', marginTop: 18 }]}>
-            En continuant, vous acceptez les conditions d’utilisation et la politique de confidentialité de BALLAL.
+          <Text style={[styles.muted, { fontSize: 11.5, textAlign: 'center' }]}>
+            En continuant, vous acceptez les conditions d’utilisation et la politique de confidentialité de Ballal.
           </Text>
         </FadeIn>
       </ScrollView>
