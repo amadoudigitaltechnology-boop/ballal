@@ -36,7 +36,7 @@ export function friendlyError(e: unknown): string {
   const m = (e as { message?: string })?.message ?? String(e);
   const l = m.toLowerCase();
   if (l.includes('invalid login') || l.includes('invalid credentials')) return 'E-mail ou mot de passe incorrect.';
-  if (l.includes('already registered') || l.includes('already_registered')) return 'Un compte existe déjà avec cet e-mail.';
+  if (l.includes('already registered') || l.includes('already_registered')) return 'Un compte existe déjà avec cet e-mail (peut-être créé avec Google). Connectez-vous avec Google, ou touchez « Mot de passe oublié ».';
   if (l.includes('not confirmed')) return 'Confirmez d’abord votre e-mail avec le code reçu.';
   if (l.includes('expired') || l.includes('otp')) return 'Code incorrect ou expiré.';
   if (l.includes('network') || l.includes('fetch')) return 'Pas de connexion Internet.';

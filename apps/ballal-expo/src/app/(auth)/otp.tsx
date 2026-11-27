@@ -38,6 +38,7 @@ export default function Otp() {
   };
 
   const resend = async () => {
+    if (!email) return router.replace('/login');
     try {
       if (mode === 'recovery') await supabase.auth.resetPasswordForEmail(email);
       else await supabase.auth.resend({ type: 'signup', email });
