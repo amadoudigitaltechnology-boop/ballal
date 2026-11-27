@@ -18,6 +18,10 @@ export default function Settings() {
   const { signOut } = useSession();
   const sections: { title: string; rows: { icon: IconName; color: string; label: string; onPress: () => void }[] }[] = [
     {
+      title: 'Compte',
+      rows: [{ icon: 'person-circle-outline', color: C.accent, label: 'Mon profil', onPress: () => router.push('/profile') }],
+    },
+    {
       title: 'Sécurité',
       rows: [{ icon: 'lock-closed-outline', color: '#7C3AED', label: 'Mot de passe', onPress: () => router.push('/new-password') }],
     },

@@ -5,9 +5,13 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const supa = createClient(SUPABASE_URL, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false } });
-const BASE = (Deno.env.get("DJOMY_BASE_URL") ?? "https://sandbox-api.djomy.africa").replace(/\/+$/, "");
-const CLIENT_ID = Deno.env.get("DJOMY_CLIENT_ID") ?? "";
-const CLIENT_SECRET = Deno.env.get("DJOMY_CLIENT_SECRET") ?? "";
+// Lecture tolérante des secrets (accepte une petite faute de nom : DJOMY/JOMI, SECRET/SECRETS…).
+const ENV = Deno.env.toObject();
+const envFind = (exact: string, re: RegExp) =>
+  (Object.entries(ENV).find(([k, v]) => (k.trim() === exact || re.test(k.trim())) && v.trim())?.[1] ?? "").trim();
+const CLIENT_ID = envFind("DJOMY_CLIENT_ID", /^D?J[OA]?M[IY]_?CLIENT_?ID$/i);
+const BASE = (envFind("DJOMY_BASE_URL", /^D?J[OA]?M[IY]_?BASE_?URL$/i) || "https://sandbox-api.djomy.africa").replace(/\/+$/, "");
+const CLIENT_SECRET = envFind("DJOMY_CLIENT_SECRET", /^D?J[OA]?M[IY]_?CLIENT_?SECRETS?$/i);
 
 const json = (status: number, body: unknown) =>
   new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json", "Cache-Control": "no-store" } });
@@ -28,7 +32,10 @@ async function djomyHeaders(withToken: boolean): Promise<Record<string, string>>
     const res = await fetch(`${BASE}/v1/auth`, { method: "POST", headers: h, body: "{}" });
     const body = await res.json().catch(() => ({}));
     const token = body?.access_token ?? body?.token ?? body?.data?.access_token ?? body?.data?.accessToken ?? body?.data?.token;
-    if (!res.ok || !token) throw new Error(`djomy_auth_${res.status}`);
+    if (!res.ok || !token) {
+      console.error("djomy auth", res.status, JSON.stringify(body).slice(0, 300));
+      throw new Error(`djomy_auth_${res.status}`);
+    }
     h.Authorization = `Bearer ${token}`;
   }
   return h;
@@ -36,7 +43,10 @@ async function djomyHeaders(withToken: boolean): Promise<Record<string, string>>
 
 Deno.serve(async (req) => {
   if (req.method !== "POST") return json(405, { error: "method_not_allowed" });
-  if (!CLIENT_ID || !CLIENT_SECRET) return json(503, { error: "payment_not_configured" });
+  if (!CLIENT_ID || !CLIENT_SECRET) {
+    console.warn("DJOMY secrets introuvables. Noms vus :", Object.entries(ENV).filter(([k]) => /OMY|OMI|CLIENT/i.test(k)).map(([k, v]) => `[${k}]=${v.trim() ? "rempli" : "VIDE"}`).join(", ") || "aucun");
+    return json(503, { error: "payment_not_configured" });
+  }
 
   // Utilisateur authentifié (jeton Supabase vérifié par le serveur).
   const jwt = (req.headers.get("Authorization") ?? "").replace(/^Bearer\s+/i, "");

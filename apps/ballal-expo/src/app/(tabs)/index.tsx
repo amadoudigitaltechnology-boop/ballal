@@ -75,6 +75,11 @@ export default function Home() {
           <Text style={{ fontFamily: F.medium, color: C.muted, fontSize: 13 }}>{hello}{first ? ` ${first}` : ''} </Text>
           <Logo height={24} />
         </View>
+        <Pressy onPress={() => router.push('/profile')} style={{ marginRight: 10 }}>
+          <LinearGradient colors={brandGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', ...shadow }}>
+            <Text style={{ color: '#fff', fontFamily: F.heavy, fontSize: 16 }}>{(first || '?').charAt(0).toUpperCase()}</Text>
+          </LinearGradient>
+        </Pressy>
         <Pressy onPress={() => router.push('/market')} style={{ marginRight: 10 }}>
           <LinearGradient colors={['#FF9A3D', C.accent]} style={{ width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', ...shadow }}>
             <Ionicons name="cart" size={21} color="#fff" />

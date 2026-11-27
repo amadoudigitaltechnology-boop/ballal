@@ -5,9 +5,13 @@
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
 const supa = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false } });
-const BASE = (Deno.env.get("DJOMY_BASE_URL") ?? "https://sandbox-api.djomy.africa").replace(/\/+$/, "");
-const CLIENT_ID = Deno.env.get("DJOMY_CLIENT_ID") ?? "";
-const CLIENT_SECRET = Deno.env.get("DJOMY_CLIENT_SECRET") ?? "";
+// Lecture tolérante des secrets (accepte une petite faute de nom : DJOMY/JOMI, SECRET/SECRETS…).
+const ENV = Deno.env.toObject();
+const envFind = (exact: string, re: RegExp) =>
+  (Object.entries(ENV).find(([k, v]) => (k.trim() === exact || re.test(k.trim())) && v.trim())?.[1] ?? "").trim();
+const CLIENT_ID = envFind("DJOMY_CLIENT_ID", /^D?J[OA]?M[IY]_?CLIENT_?ID$/i);
+const BASE = (envFind("DJOMY_BASE_URL", /^D?J[OA]?M[IY]_?BASE_?URL$/i) || "https://sandbox-api.djomy.africa").replace(/\/+$/, "");
+const CLIENT_SECRET = envFind("DJOMY_CLIENT_SECRET", /^D?J[OA]?M[IY]_?CLIENT_?SECRETS?$/i);
 const APP_RETURN = "com.amadoutechnology.ballal://payment-return";
 
 async function hmacHex(message: string, secret: string): Promise<string> {

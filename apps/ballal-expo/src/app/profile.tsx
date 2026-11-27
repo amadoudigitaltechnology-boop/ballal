@@ -65,11 +65,14 @@ export default function Profile() {
 
   return (
     <View style={{ flex: 1, backgroundColor: C.bg }}>
-      <ScrollView contentContainerStyle={{ paddingBottom: 120 }} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 40 }} showsVerticalScrollIndicator={false}>
         {/* Carte d'identité */}
-        <LinearGradient colors={brandGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ paddingTop: insets.top + 18, paddingBottom: 54, paddingHorizontal: 20, borderBottomLeftRadius: 34, borderBottomRightRadius: 34 }}>
+        <LinearGradient colors={brandGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ paddingTop: insets.top + 6, paddingBottom: 54, paddingHorizontal: 20, borderBottomLeftRadius: 34, borderBottomRightRadius: 34 }}>
           <View style={{ position: 'absolute', right: -50, top: -40, width: 200, height: 200, borderRadius: 100, backgroundColor: 'rgba(255,255,255,0.10)' }} />
           <View style={{ position: 'absolute', left: -30, bottom: -50, width: 140, height: 140, borderRadius: 70, backgroundColor: 'rgba(255,122,26,0.25)' }} />
+          <Pressy onPress={() => router.back()} style={{ alignSelf: 'flex-start', marginBottom: 14, marginLeft: -6, padding: 6 }}>
+            <Ionicons name="chevron-back" size={26} color="#fff" />
+          </Pressy>
           <FadeIn style={[styles.row]}>
             <View style={{ padding: 3, borderRadius: 50, backgroundColor: 'rgba(255,255,255,0.35)' }}>
               <ProPhoto path={null} name={profile?.fullName ?? ''} size={78} radius={39} />
