@@ -51,7 +51,7 @@ export default function Home() {
       {/* En-tête */}
       <View style={[styles.row, { paddingHorizontal: 20, paddingTop: 6, height: 52 }]}>
         <View style={{ flex: 1 }}>
-          <Text style={{ fontFamily: F.medium, color: C.muted, fontSize: 13 }}>{hello}{first ? ` ${first}` : ''} 👋</Text>
+          <Text style={{ fontFamily: F.medium, color: C.muted, fontSize: 13 }}>{hello}{first ? ` ${first}` : ''} </Text>
           <Logo height={24} />
         </View>
         <Pressy onPress={() => router.push('/market')} style={{ marginRight: 10 }}>

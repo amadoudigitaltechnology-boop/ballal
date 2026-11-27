@@ -22,7 +22,7 @@ export default function NewPassword() {
     try {
       const { error } = await supabase.auth.updateUser({ password, data: { password_set: true } });
       if (error) throw error;
-      if (!creating) Alert.alert('Ballal', 'Mot de passe enregistré ✅');
+      if (!creating) Alert.alert('Ballal', 'Mot de passe enregistré');
       router.replace('/');
     } catch (e) {
       Alert.alert('BALLAL', friendlyError(e));

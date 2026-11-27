@@ -1,22 +1,23 @@
 import { Ionicons } from '@expo/vector-icons';
+import { RecordingPresets, requestRecordingPermissionsAsync, setAudioModeAsync, useAudioPlayer, useAudioPlayerStatus, useAudioRecorder, useAudioRecorderState } from 'expo-audio';
 import * as Crypto from 'expo-crypto';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Animated, FlatList, KeyboardAvoidingView, Pressable, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Animated, FlatList, KeyboardAvoidingView, Pressable, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ProPhoto } from '@/components/ProTile';
 import { Pressy, styles, tap } from '@/components/ui';
-import { clock, conversations, dayLabel, loadMessages, markRead, sendText, signedAttachment, toMessage, type ChatMessage } from '@/lib/api';
+import { clock, conversations, sendAudio, dayLabel, loadMessages, markRead, sendText, signedAttachment, toMessage, type ChatMessage } from '@/lib/api';
 import { gnf, marketPhoto } from '@/lib/market';
 import { useSession } from '@/lib/session';
-import { supabase } from '@/lib/supabase';
+import { friendlyError, supabase } from '@/lib/supabase';
 import { C, F, brandGradient } from '@/lib/theme';
 
-const QUICK = ['Bonjour 👋', 'Êtes-vous disponible ?', 'Quel est votre tarif ?', 'Où êtes-vous situé ?'];
-const QUICK_ITEM = ['Bonjour 👋', 'Toujours disponible ?', 'Dernier prix ?', 'On se voit où ?'];
+const QUICK = ['Bonjour', 'Êtes-vous disponible ?', 'Quel est votre tarif ?', 'Où êtes-vous situé ?'];
+const QUICK_ITEM = ['Bonjour', 'Toujours disponible ?', 'Dernier prix ?', 'On se voit où ?'];
 
 /** Discussion en temps réel : bulles animées, accusés de lecture, « écrit… », envoi instantané. */
 export default function Chat() {
@@ -128,7 +129,7 @@ export default function Chat() {
     const clientId = retry?.clientId ?? Crypto.randomUUID();
     const temp: ChatMessage = retry
       ? { ...retry, pending: true, failed: false }
-      : { id: clientId, clientId, conversationId: id, senderId: me, type: 'text', body, attachmentPath: null, createdAt: new Date().toISOString(), pending: true };
+      : { id: clientId, clientId, conversationId: id, senderId: me, type: 'text', body, attachmentPath: null, durationMs: null, createdAt: new Date().toISOString(), pending: true };
     if (!retry) setText('');
     setMsgs((prev) => (retry ? (prev ?? []).map((x) => (x.clientId === clientId ? temp : x)) : [temp, ...(prev ?? [])]));
     if (!retry) setFresh((s) => new Set(s).add(clientId));
@@ -142,6 +143,56 @@ export default function Chat() {
 
   const data = msgs ?? [];
   const canSend = text.trim().length > 0;
+
+  // ───── Messages vocaux ─────
+  const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
+  const recState = useAudioRecorderState(recorder, 250);
+  const [recording, setRecording] = useState(false);
+
+  const startRecording = async () => {
+    try {
+      const perm = await requestRecordingPermissionsAsync();
+      if (!perm.granted) return Alert.alert('Micro', 'Autorisez le micro pour envoyer un message vocal.');
+      await setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true });
+      await recorder.prepareToRecordAsync();
+      recorder.record();
+      tap();
+      setRecording(true);
+    } catch (e) {
+      Alert.alert('Ballal', friendlyError(e));
+    }
+  };
+
+  const cancelRecording = async () => {
+    setRecording(false);
+    try {
+      await recorder.stop();
+    } catch {}
+    await setAudioModeAsync({ allowsRecording: false, playsInSilentMode: true }).catch(() => undefined);
+  };
+
+  const stopAndSend = async () => {
+    const duration = recState.durationMillis;
+    setRecording(false);
+    try {
+      await recorder.stop();
+      await setAudioModeAsync({ allowsRecording: false, playsInSilentMode: true });
+      const uri = recorder.uri;
+      if (!uri || duration < 700 || !me) return;
+      const clientId = Crypto.randomUUID();
+      const temp: ChatMessage = { id: clientId, clientId, conversationId: id, senderId: me, type: 'audio', body: uri, attachmentPath: null, durationMs: duration, createdAt: new Date().toISOString(), pending: true };
+      setMsgs((prev) => [temp, ...(prev ?? [])]);
+      setFresh((sv) => new Set(sv).add(clientId));
+      try {
+        const saved = await sendAudio(id, me, clientId, uri, duration);
+        if (saved) upsert(saved, false);
+      } catch {
+        setMsgs((prev) => (prev ?? []).map((x) => (x.clientId === clientId ? { ...x, pending: false, failed: true } : x)));
+      }
+    } catch (e) {
+      Alert.alert('Ballal', friendlyError(e));
+    }
+  };
 
   return (
     <KeyboardAvoidingView style={{ flex: 1, backgroundColor: '#EEF3FC' }} behavior="padding">
@@ -258,8 +309,21 @@ export default function Chat() {
             style={{ fontFamily: F.body, fontSize: 15, color: C.text, paddingVertical: 10, maxHeight: 110 }}
           />
         </View>
-        <SendButton active={canSend} onPress={() => send()} />
+        {canSend ? <SendButton active onPress={() => send()} /> : <MicButton onPress={startRecording} />}
       </View>
+      {recording ? (
+        <View style={[styles.row, { position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: 14, paddingTop: 12, paddingBottom: Math.max(insets.bottom, 12), backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, elevation: 14 }]}>
+          <Pressy onPress={cancelRecording} style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: '#FEE2E2', alignItems: 'center', justifyContent: 'center' }}>
+            <Ionicons name="trash-outline" size={20} color={C.danger} />
+          </Pressy>
+          <View style={[styles.row, { flex: 1, marginHorizontal: 12 }]}>
+            <RecDot />
+            <Text style={{ fontFamily: F.bold, fontSize: 16, color: C.text, marginLeft: 8 }}>{fmtDuration(recState.durationMillis)}</Text>
+            <Text style={[styles.muted, { marginLeft: 10, fontSize: 13 }]}>Enregistrement…</Text>
+          </View>
+          <SendButton active onPress={stopAndSend} />
+        </View>
+      ) : null}
     </KeyboardAvoidingView>
   );
 }
@@ -312,10 +376,7 @@ function Bubble({ m, mine, tail, read, animate, onRetry }: { m: ChatMessage; min
     m.type === 'image' && m.attachmentPath ? (
       <AttachmentImage path={m.attachmentPath} />
     ) : m.type === 'audio' ? (
-      <View style={styles.row}>
-        <Ionicons name="mic" size={18} color={mine ? '#fff' : C.primary} />
-        <Text style={{ marginLeft: 6, fontFamily: F.semibold, color: mine ? '#fff' : C.text }}>Message vocal</Text>
-      </View>
+      <AudioBubble path={m.attachmentPath} localUri={m.pending ? m.body : null} durationMs={m.durationMs} mine={mine} />
     ) : (
       <Text style={{ fontFamily: F.body, fontSize: 15, lineHeight: 21, color: mine ? '#fff' : C.text }}>{m.body}</Text>
     );
@@ -393,6 +454,75 @@ function TypingBubble() {
           style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: C.primary, opacity: d.interpolate({ inputRange: [0, 1], outputRange: [0.35, 1] }), transform: [{ translateY: d.interpolate({ inputRange: [0, 1], outputRange: [0, -5] }) }] }}
         />
       ))}
+    </View>
+  );
+}
+
+function fmtDuration(ms: number | null | undefined): string {
+  const t = Math.max(0, Math.round((ms ?? 0) / 1000));
+  return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`;
+}
+
+function MicButton({ onPress }: { onPress: () => void }) {
+  return (
+    <Pressable onPress={onPress} style={{ marginLeft: 8 }}>
+      <LinearGradient colors={['#FF9A3D', C.accent]} style={{ width: 46, height: 46, borderRadius: 23, alignItems: 'center', justifyContent: 'center' }}>
+        <Ionicons name="mic" size={21} color="#fff" />
+      </LinearGradient>
+    </Pressable>
+  );
+}
+
+function RecDot() {
+  const v = useState(() => new Animated.Value(1))[0];
+  useEffect(() => {
+    const a = Animated.loop(Animated.sequence([
+      Animated.timing(v, { toValue: 0.25, duration: 500, useNativeDriver: true }),
+      Animated.timing(v, { toValue: 1, duration: 500, useNativeDriver: true }),
+    ]));
+    a.start();
+    return () => a.stop();
+  }, [v]);
+  return <Animated.View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: C.danger, opacity: v }} />;
+}
+
+/** Lecteur de message vocal : lecture / pause, barre de progression, durée. */
+function AudioBubble({ path, localUri, durationMs, mine }: { path: string | null; localUri: string | null; durationMs: number | null; mine: boolean }) {
+  const [url, setUrl] = useState<string | null>(localUri);
+  useEffect(() => {
+    let alive = true;
+    if (path) signedAttachment(path).then((u) => alive && u && setUrl(u));
+    return () => {
+      alive = false;
+    };
+  }, [path]);
+  const player = useAudioPlayer(url ? { uri: url } : null);
+  const st = useAudioPlayerStatus(player);
+  const total = st.duration > 0 ? st.duration * 1000 : (durationMs ?? 0);
+  const progress = total > 0 ? Math.min(1, (st.currentTime * 1000) / total) : 0;
+  const toggle = () => {
+    if (!url) return;
+    if (st.playing) player.pause();
+    else {
+      if (st.didJustFinish || progress >= 0.99) player.seekTo(0);
+      setAudioModeAsync({ allowsRecording: false, playsInSilentMode: true }).catch(() => undefined);
+      player.play();
+    }
+  };
+  const fg = mine ? '#fff' : C.primary;
+  return (
+    <View style={[styles.row, { width: 200 }]}>
+      <Pressable onPress={toggle} hitSlop={8} style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: mine ? 'rgba(255,255,255,0.22)' : C.primarySoft, alignItems: 'center', justifyContent: 'center' }}>
+        {url ? <Ionicons name={st.playing ? 'pause' : 'play'} size={18} color={fg} style={{ marginLeft: st.playing ? 0 : 2 }} /> : <ActivityIndicator size="small" color={fg} />}
+      </Pressable>
+      <View style={{ flex: 1, marginLeft: 10 }}>
+        <View style={{ height: 4, borderRadius: 2, backgroundColor: mine ? 'rgba(255,255,255,0.3)' : '#DCE6FB' }}>
+          <View style={{ width: `${progress * 100}%`, height: 4, borderRadius: 2, backgroundColor: fg }} />
+        </View>
+        <Text style={{ marginTop: 5, fontFamily: F.semibold, fontSize: 11.5, color: mine ? 'rgba(255,255,255,0.85)' : C.muted }}>
+          {fmtDuration(st.playing || progress > 0 ? st.currentTime * 1000 : total)}
+        </Text>
+      </View>
     </View>
   );
 }

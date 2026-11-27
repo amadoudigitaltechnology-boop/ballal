@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
-import { Alert, Animated, Modal, Pressable, ScrollView, Switch, Text, View } from 'react-native';
+import { Alert, Animated, Modal, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button, FadeIn, Input, styles } from '@/components/ui';
@@ -33,9 +33,11 @@ export default function Setup() {
   const [source, setSource] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
+  const [step, setStep] = useState<1 | 2>(1);
   const scale = useState(() => new Animated.Value(0))[0];
 
-  const valid = name.trim().length >= 2 && role && accepted && source;
+  const step1Ok = name.trim().length >= 2 && !!role;
+  const valid = step1Ok && accepted && source;
 
   const submit = async () => {
     if (!valid || !session) return;
@@ -62,36 +64,63 @@ export default function Setup() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
-      <ScrollView contentContainerStyle={{ padding: 24, gap: 14 }}>
-        <FadeIn>
-          <Text style={[styles.h1, { fontSize: 28 }]}>Complétez votre profil</Text>
-          <Text style={[styles.muted, { marginTop: 6 }]}>Encore une étape et c’est prêt.</Text>
-        </FadeIn>
-        <Text style={{ fontFamily: F.bold, marginTop: 8 }}>Nom complet</Text>
-        <Input icon="person-outline" placeholder="Ex. : Mamadou Diallo" value={name} onChangeText={setName} autoCapitalize="words" />
-        <Text style={{ fontFamily: F.bold, marginTop: 8 }}>Vous êtes…</Text>
-        <RoleCard role={role} setRole={setRole} value="client" icon="search" title="Client" text="Je cherche des professionnels" />
-        <RoleCard role={role} setRole={setRole} value="professional" icon="construct" title="Professionnel" text="Je propose mes services" />
-        <Text style={{ fontFamily: F.bold, marginTop: 8 }}>Où avez-vous entendu parler de Ballal ?</Text>
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-          {SOURCES.map((o) => {
-            const on = source === o.key;
-            return (
-              <Pressable
-                key={o.key}
-                onPress={() => setSource(o.key)}
-                style={[styles.row, { borderRadius: 20, paddingHorizontal: 12, paddingVertical: 8, borderWidth: 1.5, borderColor: on ? o.color : C.border, backgroundColor: on ? o.color + '14' : '#fff' }]}>
-                <Ionicons name={o.icon} size={17} color={o.color} />
-                <Text style={{ marginLeft: 6, fontFamily: on ? F.bold : F.semibold, fontSize: 13, color: C.text }}>{o.label}</Text>
-              </Pressable>
-            );
-          })}
+      <ScrollView contentContainerStyle={{ padding: 24, gap: 14 }} keyboardShouldPersistTaps="handled">
+        {/* Barre de progression : étape 1 sur 2 */}
+        <View style={[styles.row, { gap: 8 }]}>
+          {step === 2 ? (
+            <Pressable onPress={() => setStep(1)} hitSlop={10} style={{ marginRight: 4 }}>
+              <Ionicons name="chevron-back" size={24} color={C.text} />
+            </Pressable>
+          ) : null}
+          {[1, 2].map((n) => (
+            <View key={n} style={{ flex: 1, height: 6, borderRadius: 3, backgroundColor: n <= step ? C.primary : C.border }} />
+          ))}
+          <Text style={{ fontFamily: F.bold, color: C.muted, fontSize: 12.5, marginLeft: 4 }}>{step}/2</Text>
         </View>
-        <View style={[styles.row, { marginTop: 6 }]}>
-          <Switch value={accepted} onValueChange={setAccepted} trackColor={{ true: C.primary }} />
-          <Text style={[styles.muted, { flex: 1, marginLeft: 10 }]}>J’accepte les conditions d’utilisation et la politique de confidentialité.</Text>
-        </View>
-        <Button label="Continuer" icon="arrow-forward" onPress={submit} loading={loading} style={{ marginTop: 8, opacity: valid ? 1 : 0.5 }} />
+
+        {step === 1 ? (
+          <FadeIn key="s1" style={{ gap: 14 }}>
+            <View>
+              <Text style={[styles.h1, { fontSize: 28 }]}>Complétez votre profil</Text>
+              <Text style={[styles.muted, { marginTop: 6 }]}>Dites-nous qui vous êtes.</Text>
+            </View>
+            <Text style={{ fontFamily: F.bold, marginTop: 4 }}>Nom complet</Text>
+            <Input icon="person-outline" placeholder="Ex. : Mamadou Diallo" value={name} onChangeText={setName} autoCapitalize="words" />
+            <Text style={{ fontFamily: F.bold, marginTop: 4 }}>Vous êtes…</Text>
+            <RoleCard role={role} setRole={setRole} value="client" icon="search" title="Client" text="Je cherche des professionnels" />
+            <RoleCard role={role} setRole={setRole} value="professional" icon="construct" title="Professionnel" text="Je propose mes services" />
+            <Button label="Continuer" icon="arrow-forward" onPress={() => step1Ok && setStep(2)} style={{ marginTop: 8, opacity: step1Ok ? 1 : 0.5 }} />
+          </FadeIn>
+        ) : (
+          <FadeIn key="s2" style={{ gap: 14 }}>
+            <View>
+              <Text style={[styles.h1, { fontSize: 28 }]}>Dernière étape</Text>
+              <Text style={[styles.muted, { marginTop: 6 }]}>Où avez-vous entendu parler de Ballal ?</Text>
+            </View>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
+              {SOURCES.map((o) => {
+                const on = source === o.key;
+                return (
+                  <Pressable
+                    key={o.key}
+                    onPress={() => setSource(o.key)}
+                    style={[styles.row, { width: '47.5%', borderRadius: 16, paddingHorizontal: 12, paddingVertical: 12, borderWidth: 1.5, borderColor: on ? o.color : C.border, backgroundColor: on ? o.color + '14' : '#fff' }]}>
+                    <Ionicons name={o.icon} size={20} color={o.color} />
+                    <Text style={{ marginLeft: 8, flex: 1, fontFamily: on ? F.bold : F.semibold, fontSize: 13.5, color: C.text }}>{o.label}</Text>
+                    {on ? <Ionicons name="checkmark-circle" size={18} color={o.color} /> : null}
+                  </Pressable>
+                );
+              })}
+            </View>
+            <Pressable onPress={() => setAccepted(!accepted)} style={[styles.row, { marginTop: 6 }]}>
+              <View style={{ width: 24, height: 24, borderRadius: 7, borderWidth: 2, borderColor: accepted ? C.primary : C.border, backgroundColor: accepted ? C.primary : '#fff', alignItems: 'center', justifyContent: 'center' }}>
+                {accepted ? <Ionicons name="checkmark" size={16} color="#fff" /> : null}
+              </View>
+              <Text style={[styles.muted, { flex: 1, marginLeft: 10 }]}>J’accepte les conditions d’utilisation et la politique de confidentialité.</Text>
+            </Pressable>
+            <Button label="Continuer" icon="arrow-forward" onPress={submit} loading={loading} style={{ marginTop: 8, opacity: valid ? 1 : 0.5 }} />
+          </FadeIn>
+        )}
       </ScrollView>
 
       <Modal visible={done} transparent animationType="fade">
@@ -100,8 +129,8 @@ export default function Setup() {
             <View style={{ width: 110, height: 110, borderRadius: 55, backgroundColor: '#DCFCE7', alignItems: 'center', justifyContent: 'center' }}>
               <Ionicons name="checkmark-circle" size={96} color={C.success} />
             </View>
-            <Text style={[styles.h2, { textAlign: 'center', marginTop: 16 }]}>Votre compte a été créé avec succès 🎉</Text>
-            <Text style={[styles.muted, { textAlign: 'center', marginTop: 8 }]}>Bienvenue sur BALLAL, {name.split(' ')[0]} ! Tout est prêt.</Text>
+            <Text style={[styles.h2, { textAlign: 'center', marginTop: 16 }]}>Votre compte a été créé avec succès</Text>
+            <Text style={[styles.muted, { textAlign: 'center', marginTop: 8 }]}>Bienvenue sur Ballal, {name.split(' ')[0]} ! Tout est prêt.</Text>
           </Animated.View>
         </View>
       </Modal>

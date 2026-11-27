@@ -174,6 +174,7 @@ export type ChatMessage = {
   type: 'text' | 'image' | 'audio';
   body: string | null;
   attachmentPath: string | null;
+  durationMs: number | null;
   createdAt: string;
   pending?: boolean;
   failed?: boolean;
@@ -188,6 +189,7 @@ export function toMessage(m: Record<string, any>): ChatMessage {
     type: m.type ?? 'text',
     body: m.body ?? null,
     attachmentPath: m.attachment_path ?? null,
+    durationMs: m.duration_ms ?? null,
     createdAt: m.created_at,
   };
 }
@@ -209,6 +211,34 @@ export async function sendText(conversationId: string, senderId: string, clientI
   const { data, error } = await supabase
     .from('messages')
     .insert({ conversation_id: conversationId, sender_id: senderId, client_message_id: clientId, type: 'text', body })
+    .select('*')
+    .single();
+  if (error) {
+    if (error.code === '23505') return null;
+    throw error;
+  }
+  return toMessage(data);
+}
+
+/** Message vocal : fichier dans le dossier privé de la conversation, puis message de type audio. */
+export async function sendAudio(conversationId: string, senderId: string, clientId: string, uri: string, durationMs: number): Promise<ChatMessage | null> {
+  const body = await (await fetch(uri)).arrayBuffer();
+  if (body.byteLength > 10 * 1024 * 1024) throw new Error('Message vocal trop long.');
+  const path = `${conversationId}/${clientId}.m4a`;
+  const up = await supabase.storage.from('message-attachments').upload(path, body, { contentType: 'audio/mp4', upsert: true });
+  if (up.error) throw up.error;
+  const { data, error } = await supabase
+    .from('messages')
+    .insert({
+      conversation_id: conversationId,
+      sender_id: senderId,
+      client_message_id: clientId,
+      type: 'audio',
+      attachment_path: path,
+      attachment_mime: 'audio/mp4',
+      attachment_size: body.byteLength,
+      duration_ms: Math.min(Math.max(Math.round(durationMs), 0), 300000),
+    })
     .select('*')
     .single();
   if (error) {

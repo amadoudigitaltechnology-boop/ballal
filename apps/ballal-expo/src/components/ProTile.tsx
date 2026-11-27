@@ -126,7 +126,7 @@ export function ProCardBig({ pro, width, height }: { pro: ProCard; width: number
         </View>
         {pro.isFeatured ? (
           <LinearGradient colors={['#FF9A3D', C.accent]} style={{ position: 'absolute', right: 10, top: 10, borderRadius: 20, paddingHorizontal: 9, paddingVertical: 4 }}>
-            <Text style={{ fontSize: 10.5, color: '#fff', fontFamily: F.heavy }}>★ À LA UNE</Text>
+            <Text style={{ fontSize: 10.5, color: '#fff', fontFamily: F.heavy }}>À LA UNE</Text>
           </LinearGradient>
         ) : null}
       </View>
@@ -168,7 +168,7 @@ export function ProCardSlim({ pro, width }: { pro: ProCard; width: number }) {
         <ProPhoto path={pro.logoPath} name={pro.displayName} size={80} radius={16} />
         {pro.isFeatured ? (
           <LinearGradient colors={['#FF9A3D', C.accent]} style={{ position: 'absolute', left: 4, top: 4, borderRadius: 8, paddingHorizontal: 5, paddingVertical: 1 }}>
-            <Text style={{ fontSize: 9, color: '#fff', fontFamily: F.heavy }}>★ UNE</Text>
+            <Text style={{ fontSize: 9, color: '#fff', fontFamily: F.heavy }}>À LA UNE</Text>
           </LinearGradient>
         ) : null}
       </View>

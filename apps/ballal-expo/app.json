@@ -40,6 +40,12 @@
           "photosPermission": "BALLAL utilise vos photos pour illustrer les articles que vous vendez.",
           "cameraPermission": "BALLAL utilise l'appareil photo pour photographier vos articles."
         }
+      ],
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "Ballal utilise le micro pour envoyer des messages vocaux."
+        }
       ]
     ],
     "scheme": [

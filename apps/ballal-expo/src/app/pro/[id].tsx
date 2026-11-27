@@ -112,7 +112,16 @@ export default function ProProfile() {
       </ScrollView>
 
       <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0, padding: 16, paddingBottom: insets.bottom + 12, backgroundColor: '#fff' }}>
-        <Button label="Contacter" icon="chatbubble-ellipses-outline" variant="accent" onPress={contact} />
+        <View style={{ flexDirection: 'row', gap: 10 }}>
+          <Button
+            label="Envoyer une demande"
+            icon="document-text-outline"
+            variant="outline"
+            onPress={() => router.push({ pathname: '/request/[pro]', params: { pro: String(id), name: pro?.displayName ?? '' } })}
+            style={{ flex: 1 }}
+          />
+          <Button label="Contacter" icon="chatbubble-ellipses-outline" variant="accent" onPress={contact} style={{ flex: 1 }} />
+        </View>
       </View>
     </View>
   );

@@ -64,7 +64,7 @@ export default function Messages() {
         <View style={{ flex: 1 }}>
           <Text style={[styles.h1, { fontSize: 26 }]}>Messages</Text>
           <Text style={[styles.muted, { fontSize: 13 }]}>
-            {unreadTotal ? `${unreadTotal} message${unreadTotal > 1 ? 's' : ''} non lu${unreadTotal > 1 ? 's' : ''}` : 'Vous êtes à jour ✨'}
+            {unreadTotal ? `${unreadTotal} message${unreadTotal > 1 ? 's' : ''} non lu${unreadTotal > 1 ? 's' : ''}` : 'Vous êtes à jour'}
           </Text>
         </View>
       </View>
@@ -139,7 +139,7 @@ export default function Messages() {
                     </View>
                   ) : null}
                   <Text numberOfLines={1} style={{ fontFamily: item.unread ? F.bold : F.body, fontSize: 13.5, color: item.unread ? C.text : C.muted, marginTop: 3 }}>
-                    {item.preview ?? 'Démarrez la discussion 👋'}
+                    {item.preview ?? 'Démarrez la discussion'}
                   </Text>
                 </View>
                 <View style={{ alignItems: 'flex-end', gap: 6, marginLeft: 8 }}>

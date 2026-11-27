@@ -44,7 +44,7 @@ export default function Search() {
           onPress={() => router.setParams({ category: undefined, name: undefined })}
           style={{ alignSelf: 'flex-start', marginLeft: 16, marginTop: 10 }}>
           <View style={[styles.row, { backgroundColor: C.primarySoft, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 }]}>
-            <Text style={{ color: C.primary, fontFamily: F.bold }}>{category.name}  ✕</Text>
+            <Text style={{ color: C.primary, fontFamily: F.bold }}>{category.name}  ×</Text>
           </View>
         </Pressable>
       ) : null}
