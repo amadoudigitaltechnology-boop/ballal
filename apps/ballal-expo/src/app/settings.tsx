@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { Linking, Pressable, ScrollView, Text, View } from 'react-native';
+import { Alert, Linking, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button, Card, styles } from '@/components/ui';
@@ -15,7 +15,7 @@ export default function Settings() {
     { icon: 'lock-closed-outline', label: 'Mot de passe', onPress: () => router.push('/new-password') },
     { icon: 'shield-checkmark-outline', label: 'Politique de confidentialité', onPress: () => Linking.openURL(`${LEGAL}/confidentialite.html`) },
     { icon: 'document-text-outline', label: 'Conditions d’utilisation', onPress: () => Linking.openURL(`${LEGAL}/conditions.html`) },
-    { icon: 'logo-whatsapp', label: 'Aide & Support', onPress: () => Linking.openURL('https://wa.me/224620657693') },
+    { icon: 'help-buoy-outline', label: 'Aide & Support', onPress: () => router.push('/support') },
   ];
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }}>
@@ -35,7 +35,14 @@ export default function Settings() {
             </Card>
           ))}
         </Card>
-        <Button label="Se déconnecter" icon="log-out-outline" variant="danger" onPress={signOut} style={{ marginTop: 24 }} />
+        <Button label="Se déconnecter" icon="log-out-outline" variant="danger" onPress={() =>
+            Alert.alert('Déconnexion', 'Voulez-vous vous déconnecter ?', [
+              { text: 'Annuler', style: 'cancel' },
+              { text: 'Se déconnecter', style: 'destructive', onPress: signOut },
+            ])
+          }
+          style={{ marginTop: 24 }}
+        />
       </ScrollView>
     </SafeAreaView>
   );

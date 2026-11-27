@@ -1,26 +1,22 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { Alert, Linking, ScrollView, Text, View } from 'react-native';
+import { ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ProPhoto } from '@/components/ProTile';
-import { Button, Card, FadeIn, styles } from '@/components/ui';
+import { Card, FadeIn, styles } from '@/components/ui';
 import { useSession } from '@/lib/session';
 import { C, F } from '@/lib/theme';
 
 export default function Profile() {
-  const { session, profile, signOut } = useSession();
+  const { session, profile } = useSession();
   const isPro = profile?.roles.includes('professional');
 
   const rows: { icon: keyof typeof Ionicons.glyphMap; label: string; onPress: () => void }[] = [
     { icon: 'storefront-outline', label: 'Mes annonces (Marketplace)', onPress: () => router.push('/market') },
     { icon: 'lock-closed-outline', label: 'Changer mon mot de passe', onPress: () => router.push('/new-password') },
     { icon: 'settings-outline', label: 'Paramètres', onPress: () => router.push('/settings') },
-    {
-      icon: 'logo-whatsapp',
-      label: 'Aide & Support',
-      onPress: () => Linking.openURL('https://wa.me/224620657693?text=' + encodeURIComponent('Bonjour, j’ai besoin d’aide sur BALLAL.')),
-    },
+    { icon: 'help-buoy-outline', label: 'Aide & Support', onPress: () => router.push('/support') },
   ];
 
   return (
@@ -55,18 +51,6 @@ export default function Profile() {
           </Text>
         ) : null}
 
-        <Button
-          label="Se déconnecter"
-          icon="log-out-outline"
-          variant="danger"
-          style={{ marginTop: 24 }}
-          onPress={() =>
-            Alert.alert('Déconnexion', 'Voulez-vous vous déconnecter ?', [
-              { text: 'Annuler', style: 'cancel' },
-              { text: 'Se déconnecter', style: 'destructive', onPress: signOut },
-            ])
-          }
-        />
       </ScrollView>
     </SafeAreaView>
   );
