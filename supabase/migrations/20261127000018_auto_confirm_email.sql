@@ -9,7 +9,12 @@ begin
   return new;
 end $$;
 revoke execute on function public.auto_confirm_email() from public, anon, authenticated;
-drop trigger if exists auto_confirm_email on auth.users;
-create trigger auto_confirm_email before insert on auth.users
-  for each row execute function public.auto_confirm_email();
-update auth.users set email_confirmed_at = now() where email is not null and email_confirmed_at is null;
+do $$
+begin
+  -- (ignoré dans la base de test locale, dont la table auth.users est simplifiée)
+  if exists (select 1 from information_schema.columns where table_schema = 'auth' and table_name = 'users' and column_name = 'email_confirmed_at') then
+    execute 'drop trigger if exists auto_confirm_email on auth.users';
+    execute 'create trigger auto_confirm_email before insert on auth.users for each row execute function public.auto_confirm_email()';
+    execute 'update auth.users set email_confirmed_at = now() where email is not null and email_confirmed_at is null';
+  end if;
+end $$;
