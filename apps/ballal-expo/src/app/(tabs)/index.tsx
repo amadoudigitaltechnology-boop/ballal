@@ -2,8 +2,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useFocusEffect } from 'expo-router';
-import { useCallback, useState } from 'react';
-import { ActivityIndicator, Dimensions, FlatList, Pressable, ScrollView, Text, View } from 'react-native';
+import { useCallback, useEffect, useState } from 'react';
+import { ActivityIndicator, Animated, Dimensions, FlatList, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ProTile } from '@/components/ProTile';
@@ -75,11 +75,6 @@ export default function Home() {
           <Text style={{ fontFamily: F.medium, color: C.muted, fontSize: 13 }}>{hello}{first ? ` ${first}` : ''} </Text>
           <Logo height={24} />
         </View>
-        <Pressy onPress={() => router.push('/profile')} style={{ marginRight: 10 }}>
-          <LinearGradient colors={brandGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', ...shadow }}>
-            <Text style={{ color: '#fff', fontFamily: F.heavy, fontSize: 16 }}>{(first || '?').charAt(0).toUpperCase()}</Text>
-          </LinearGradient>
-        </Pressy>
         <Pressy onPress={() => router.push('/market')} style={{ marginRight: 10 }}>
           <LinearGradient colors={['#FF9A3D', C.accent]} style={{ width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', ...shadow }}>
             <Ionicons name="cart" size={21} color="#fff" />
@@ -179,6 +174,9 @@ export default function Home() {
           />
         )}
       </View>
+
+      {/* Assistant Ballal : bulle flottante au-dessus de la barre du bas */}
+      <AssistantBubble />
     </SafeAreaView>
   );
 }
@@ -195,6 +193,43 @@ function SectionTitle({ title, action, onAction }: { title: string; action?: str
           <Ionicons name="chevron-forward" size={15} color={C.primary} />
         </Pressable>
       ) : null}
+    </View>
+  );
+}
+
+/** Bulle flottante qui ouvre l'assistant, avec une légère pulsation pour attirer l'œil. */
+function AssistantBubble() {
+  const pulse = useState(() => new Animated.Value(0))[0];
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, { toValue: 1, duration: 1400, useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 0, duration: 0, useNativeDriver: true }),
+        Animated.delay(1800),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [pulse]);
+  return (
+    <View pointerEvents="box-none" style={{ position: 'absolute', right: 18, bottom: 104 }}>
+      <Animated.View
+        pointerEvents="none"
+        style={{
+          position: 'absolute',
+          width: 58,
+          height: 58,
+          borderRadius: 29,
+          backgroundColor: C.primary,
+          opacity: pulse.interpolate({ inputRange: [0, 1], outputRange: [0.35, 0] }),
+          transform: [{ scale: pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.7] }) }],
+        }}
+      />
+      <Pressy onPress={() => router.push('/assistant')}>
+        <LinearGradient colors={brandGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ width: 58, height: 58, borderRadius: 29, alignItems: 'center', justifyContent: 'center', ...shadow }}>
+          <Ionicons name="chatbubble-ellipses" size={26} color="#fff" />
+        </LinearGradient>
+      </Pressy>
     </View>
   );
 }

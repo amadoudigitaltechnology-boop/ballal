@@ -38,8 +38,14 @@ export default function Login() {
       await AsyncStorage.setItem('last_email', mail);
       if (signup) {
         const { data, error } = await supabase.auth.signUp({ email: mail, password, options: { data: { password_set: true } } });
+        // Adresse déjà inscrite : on tente directement la connexion avec ce mot de passe au lieu de bloquer.
+        const exists = (error && /already|registered|exists/i.test(error.message)) || (data?.user && data.user.identities?.length === 0);
+        if (exists) {
+          const { error: e3 } = await supabase.auth.signInWithPassword({ email: mail, password });
+          if (e3) throw new Error('already_registered');
+          return;
+        }
         if (error) throw error;
-        if (data.user && data.user.identities?.length === 0) throw new Error('already_registered');
         // Comptes confirmés automatiquement par le serveur : on entre directement, sans code e-mail.
         if (!data.session) {
           const { error: e2 } = await supabase.auth.signInWithPassword({ email: mail, password });
@@ -52,7 +58,16 @@ export default function Login() {
         }
       }
     } catch (e) {
-      Alert.alert('BALLAL', friendlyError(e));
+      const msg = friendlyError(e);
+      const m = String((e as { message?: string })?.message ?? '');
+      // Mauvais mot de passe ou compte Google : on propose directement les deux sorties au lieu de bloquer.
+      if (/invalid login|invalid credentials|already_registered/i.test(m)) {
+        Alert.alert('Connexion impossible', `${msg}\n\nSi vous avez créé ce compte avec Google, utilisez « Continuer avec Google ».`, [
+          { text: 'Mot de passe oublié', onPress: () => router.push({ pathname: '/forgot', params: { email: mail } }) },
+          { text: 'Continuer avec Google', onPress: () => withGoogle() },
+          { text: 'Fermer', style: 'cancel' },
+        ]);
+      } else Alert.alert('BALLAL', msg);
     } finally {
       setLoading(false);
     }

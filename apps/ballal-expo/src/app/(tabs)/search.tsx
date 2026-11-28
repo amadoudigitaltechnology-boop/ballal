@@ -9,8 +9,8 @@ import { searchPros, type ProCard } from '@/lib/api';
 import { C, F } from '@/lib/theme';
 
 export default function Search() {
-  const params = useLocalSearchParams<{ category?: string; name?: string }>();
-  const [query, setQuery] = useState('');
+  const params = useLocalSearchParams<{ category?: string; name?: string; q?: string }>();
+  const [query, setQuery] = useState(params.q ?? '');
   const category = params.category ? { id: params.category, name: params.name ?? 'Catégorie' } : null;
   const categoryId = category?.id;
   const [items, setItems] = useState<ProCard[]>([]);

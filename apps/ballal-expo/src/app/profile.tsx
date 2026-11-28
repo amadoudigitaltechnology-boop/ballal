@@ -49,7 +49,9 @@ export default function Profile() {
     {
       title: 'Mon activité',
       rows: [
-        { icon: 'storefront-outline', color: C.accent, label: 'Mes annonces', sub: 'Marketplace', onPress: () => router.push('/market') },
+        isPro
+          ? { icon: 'storefront-outline', color: C.accent, label: 'Mes annonces', sub: 'Marketplace', onPress: () => router.push('/market') }
+          : { icon: 'storefront-outline', color: C.accent, label: 'Marketplace', sub: 'Commander auprès des pros', onPress: () => router.push('/market') },
         { icon: 'chatbubbles-outline', color: C.primary, label: 'Mes messages', onPress: () => router.push('/messages') },
       ],
     },

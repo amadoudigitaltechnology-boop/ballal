@@ -2,14 +2,13 @@ import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import { Alert, Linking, Pressable, ScrollView, Text, View } from 'react-native';
+import { Alert, Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Card, FadeIn, Logo, Pressy, styles } from '@/components/ui';
 import { useSession } from '@/lib/session';
 import { C, F, brandGradient } from '@/lib/theme';
 
-const LEGAL = 'https://amadoudigitaltechnology-boop.github.io/ballal';
 type IconName = keyof typeof Ionicons.glyphMap;
 
 /** Paramètres : sections regroupées, icônes colorées, déconnexion confirmée en bas. */
@@ -27,13 +26,17 @@ export default function Settings() {
     },
     {
       title: 'Aide',
-      rows: [{ icon: 'help-buoy-outline', color: '#0E9F6E', label: 'Aide & Support', onPress: () => router.push('/support') }],
+      rows: [
+        { icon: 'chatbubble-ellipses-outline', color: C.primary, label: 'Assistant Ballal', onPress: () => router.push('/assistant') },
+        { icon: 'help-buoy-outline', color: '#0E9F6E', label: 'Aide & questions fréquentes', onPress: () => router.push('/support') },
+      ],
     },
     {
       title: 'Informations légales',
       rows: [
-        { icon: 'shield-checkmark-outline', color: C.primary, label: 'Politique de confidentialité', onPress: () => Linking.openURL(`${LEGAL}/confidentialite.html`) },
-        { icon: 'document-text-outline', color: '#475569', label: 'Conditions d’utilisation', onPress: () => Linking.openURL(`${LEGAL}/conditions.html`) },
+        { icon: 'document-text-outline', color: '#475569', label: 'Conditions générales', onPress: () => router.push({ pathname: '/legal', params: { doc: 'terms' } }) },
+        { icon: 'shield-checkmark-outline', color: C.primary, label: 'Politique de confidentialité', onPress: () => router.push({ pathname: '/legal', params: { doc: 'privacy' } }) },
+        { icon: 'people-outline', color: '#0E9F6E', label: 'Règles de la communauté', onPress: () => router.push({ pathname: '/legal', params: { doc: 'rules' } }) },
       ],
     },
   ];

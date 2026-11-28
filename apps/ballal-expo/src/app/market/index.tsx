@@ -14,11 +14,12 @@ import { C, F, shadow } from '@/lib/theme';
 const W = Dimensions.get('window').width;
 const COL = (W - 16 * 2 - 12) / 2;
 
-/** Marketplace : chacun publie ses articles ; recherche, catégories, grille de photos, bouton « Vendre ». */
+/** Marketplace : les pros publient leurs articles ; tout le monde consulte et commande auprès du vendeur. */
 export default function Market() {
-  const { session } = useSession();
+  const { session, profile } = useSession();
   const insets = useSafeAreaInsets();
   const uid = session?.user.id;
+  const isPro = !!profile?.roles.includes('professional');
   const [cat, setCat] = useState<string | null>(null);
   const [q, setQ] = useState('');
   const [mine, setMine] = useState(false);
@@ -58,12 +59,14 @@ export default function Market() {
           </Pressable>
           <View style={{ flex: 1, marginLeft: 4 }}>
             <Text style={{ color: '#fff', fontFamily: F.displayHeavy, fontSize: 24 }}>Marketplace</Text>
-            <Text style={{ color: 'rgba(255,255,255,0.88)', fontFamily: F.medium, fontSize: 12.5 }} numberOfLines={1}>Achetez et vendez près de vous</Text>
+            <Text style={{ color: 'rgba(255,255,255,0.88)', fontFamily: F.medium, fontSize: 12.5 }} numberOfLines={1}>Commandez auprès des pros près de vous</Text>
           </View>
+          {isPro ? (
           <Pressy onPress={() => setMine(!mine)} style={[styles.row, { backgroundColor: mine ? '#fff' : 'rgba(255,255,255,0.18)', borderRadius: 18, paddingHorizontal: 12, height: 36 }]}>
             <Ionicons name="pricetags-outline" size={15} color={mine ? C.accent : '#fff'} />
             <Text style={{ marginLeft: 5, fontFamily: F.bold, fontSize: 12.5, color: mine ? C.accent : '#fff' }}>Mes annonces</Text>
           </Pressy>
+          ) : null}
         </View>
 
       <View style={[styles.row, { marginHorizontal: 16, marginTop: 14, backgroundColor: '#fff', borderRadius: 22, height: 46, paddingHorizontal: 16, ...shadow }]}>
@@ -117,7 +120,7 @@ export default function Market() {
             <Empty
               icon="storefront-outline"
               title={mine ? 'Vous n’avez encore rien publié' : 'Aucun article pour le moment'}
-              text="Touchez « Vendre » pour publier votre premier article."
+              text={isPro ? 'Touchez « Vendre » pour publier votre premier article.' : 'Les professionnels publient ici leurs articles. Revenez bientôt.'}
             />
           }
           renderItem={({ item, index }) => (
@@ -129,12 +132,14 @@ export default function Market() {
       )}
 
       {/* Bouton flottant « Vendre » */}
+      {isPro ? (
       <Pressy onPress={() => router.push('/market/new')} style={{ position: 'absolute', right: 18, bottom: insets.bottom + 24 }}>
         <LinearGradient colors={['#FF9A3D', C.accent, '#FF5A00']} style={[styles.row, { height: 52, borderRadius: 26, paddingHorizontal: 20, shadowColor: C.accent, shadowOpacity: 0.4, shadowRadius: 14, shadowOffset: { width: 0, height: 6 }, elevation: 8 }]}>
           <Ionicons name="add-circle" size={22} color="#fff" />
           <Text style={{ color: '#fff', fontFamily: F.heavy, fontSize: 15, marginLeft: 6 }}>Vendre</Text>
         </LinearGradient>
       </Pressy>
+      ) : null}
     </View>
   );
 }

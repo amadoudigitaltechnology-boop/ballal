@@ -19,7 +19,8 @@ const COMMUNES = ['Kaloum', 'Dixinn', 'Matam', 'Ratoma', 'Matoto', 'Kipé', 'Lam
 /** Publier un article : photos (6 max), titre, prix, catégorie, état, quartier, description. */
 export default function NewListing() {
   const insets = useSafeAreaInsets();
-  const { session } = useSession();
+  const { session, profile } = useSession();
+  const isPro = !!profile?.roles.includes('professional');
   const [photos, setPhotos] = useState<Picked[]>([]);
   const [title, setTitle] = useState('');
   const [price, setPrice] = useState('');
@@ -81,6 +82,16 @@ export default function NewListing() {
       setStep('');
     }
   };
+
+  if (!isPro)
+    return (
+      <View style={{ flex: 1, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center', padding: 30, gap: 14 }}>
+        <Ionicons name="storefront-outline" size={56} color={C.accent} />
+        <Text style={[styles.h2, { textAlign: 'center' }]}>Réservé aux professionnels</Text>
+        <Text style={[styles.muted, { textAlign: 'center' }]}>Seuls les comptes professionnels peuvent vendre sur le Marketplace. Vous pouvez parcourir les articles et commander auprès des vendeurs.</Text>
+        <Button label="Retour au Marketplace" icon="arrow-back" onPress={() => router.back()} />
+      </View>
+    );
 
   return (
     <KeyboardAvoidingView style={{ flex: 1, backgroundColor: C.bg }} behavior="padding">

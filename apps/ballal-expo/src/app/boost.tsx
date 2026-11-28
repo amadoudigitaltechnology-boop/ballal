@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { router, useFocusEffect } from 'expo-router';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, Text, View } from 'react-native';
@@ -19,6 +19,9 @@ type Plan = { days: number; price_gnf: number };
 /** Sponsoriser son profil : en tête des résultats et de l'accueil, avec la mention « Sponsorisé ». */
 export default function Boost() {
   const gnf = useMoney();
+  const { welcome } = useLocalSearchParams<{ welcome?: string }>();
+  const isWelcome = welcome === '1';
+  const leave = () => (isWelcome || !router.canGoBack() ? router.replace('/') : router.back());
   const insets = useSafeAreaInsets();
   const { session } = useSession();
   const uid = session?.user.id ?? '';
@@ -55,7 +58,9 @@ export default function Boost() {
         const { data: p } = await supabase.from('payments').select('status').eq('id', data.payment_id).maybeSingle();
         if (p?.status === 'success') {
           await load();
-          return Alert.alert('Profil sponsorisé', `Votre profil est en tête des résultats pendant ${choice} jours.`);
+          Alert.alert('Profil sponsorisé', `Votre profil est en tête des résultats pendant ${choice} jours.`);
+          if (isWelcome) router.replace('/');
+          return;
         }
         if (p?.status === 'failed' || p?.status === 'cancelled') break;
         await new Promise((r) => setTimeout(r, 2000));
@@ -74,12 +79,16 @@ export default function Boost() {
     <View style={{ flex: 1, backgroundColor: C.bg }}>
       <LinearGradient colors={['#FF9A3D', C.accent, '#F25C05']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ paddingTop: insets.top + 6, paddingBottom: 24, paddingHorizontal: 12, borderBottomLeftRadius: 28, borderBottomRightRadius: 28 }}>
         <View style={styles.row}>
-          <Pressable onPress={() => router.back()} hitSlop={10} style={{ padding: 6 }}>
-            <Ionicons name="chevron-back" size={26} color="#fff" />
-          </Pressable>
-          <View style={{ flex: 1, marginLeft: 4 }}>
-            <Text style={{ color: '#fff', fontFamily: F.displayHeavy, fontSize: 22 }}>Sponsoriser mon profil</Text>
-            <Text style={{ color: 'rgba(255,255,255,0.9)', fontFamily: F.medium, fontSize: 13 }}>Soyez vu en premier par les clients</Text>
+          {isWelcome ? null : (
+            <Pressable onPress={leave} hitSlop={10} style={{ padding: 6 }}>
+              <Ionicons name="chevron-back" size={26} color="#fff" />
+            </Pressable>
+          )}
+          <View style={{ flex: 1, marginLeft: isWelcome ? 8 : 4 }}>
+            <Text style={{ color: '#fff', fontFamily: F.displayHeavy, fontSize: 22 }}>{isWelcome ? 'Votre compte est prêt' : 'Sponsoriser mon profil'}</Text>
+            <Text style={{ color: 'rgba(255,255,255,0.9)', fontFamily: F.medium, fontSize: 13 }}>
+              {isWelcome ? 'Boostez votre profil pour recevoir vos premiers clients' : 'Soyez vu en premier par les clients'}
+            </Text>
           </View>
           <Ionicons name="rocket" size={32} color="#fff" />
         </View>
@@ -88,7 +97,10 @@ export default function Boost() {
       {plans === null ? (
         <ActivityIndicator color={C.accent} style={{ marginTop: 40 }} />
       ) : !isPro ? (
-        <Text style={[styles.muted, { textAlign: 'center', margin: 30 }]}>La sponsorisation est réservée aux comptes professionnels.</Text>
+        <View style={{ alignItems: 'center', margin: 30, gap: 16 }}>
+          <Text style={[styles.muted, { textAlign: 'center' }]}>La sponsorisation est réservée aux comptes professionnels.</Text>
+          <Button label="Continuer" icon="arrow-forward" onPress={leave} />
+        </View>
       ) : (
         <ScrollView contentContainerStyle={{ padding: 16, gap: 14, paddingBottom: insets.bottom + 30 }}>
           {until ? (
@@ -143,6 +155,11 @@ export default function Boost() {
 
           <Button label={busy || `Payer ${selected ? gnf(selected.price_gnf) : ''}`} icon="lock-closed" variant="accent" onPress={pay} loading={!!busy} style={{ marginTop: 6 }} />
           <Text style={[styles.muted, { textAlign: 'center', fontSize: 12 }]}>Orange Money, MTN MoMo, Wave ou carte. Paiement sécurisé.</Text>
+          {isWelcome ? (
+            <Pressable onPress={leave} style={{ alignSelf: 'center', paddingVertical: 12, paddingHorizontal: 24 }}>
+              <Text style={{ fontFamily: F.bold, color: C.muted, fontSize: 15 }}>Plus tard</Text>
+            </Pressable>
+          ) : null}
         </ScrollView>
       )}
     </View>

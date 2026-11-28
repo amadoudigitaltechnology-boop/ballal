@@ -5,8 +5,8 @@ import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useFocusEffect } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
-import { useCallback, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, Text, View } from 'react-native';
+import { useCallback, useEffect, useState } from 'react';
+import { ActivityIndicator, Alert, Animated, Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button, Card, FadeIn, Input, styles } from '@/components/ui';
@@ -25,7 +25,7 @@ type Doc = { id: string; status: 'pending' | 'approved' | 'rejected'; payment_re
 export default function Verification() {
   const gnf = useMoney();
   const insets = useSafeAreaInsets();
-  const { session } = useSession();
+  const { session, profile } = useSession();
   const uid = session?.user.id ?? '';
   const [doc, setDoc] = useState<Doc | null | undefined>(undefined);
   const [fee, setFee] = useState<number | null>(null);
@@ -106,12 +106,12 @@ export default function Verification() {
       setBusy('Paiement en cours…');
       await WebBrowser.openAuthSessionAsync(data.redirect_url as string, RETURN_URL);
       setBusy('Vérification du paiement…');
-      // La confirmation vient de Djomy (serveur) : on attend qu'elle soit enregistrée.
+      // La confirmation vient du prestataire de paiement (serveur) : on attend qu'elle soit enregistrée.
       for (let i = 0; i < 6; i++) {
         const { data: p } = await supabase.from('payments').select('status').eq('id', data.payment_id).maybeSingle();
         if (p?.status === 'success') {
           await load();
-          return Alert.alert('Paiement reçu', 'Merci ! Votre demande de vérification est en cours d’examen (48 h maximum).');
+          return Alert.alert('Profil vérifié', 'Paiement reçu. Votre badge vérifié est actif : votre profil est maintenant recommandé en priorité aux clients.');
         }
         if (p?.status === 'failed' || p?.status === 'cancelled') break;
         await new Promise((r) => setTimeout(r, 2000));
@@ -158,13 +158,16 @@ export default function Verification() {
             <FadeIn>
               <Card style={{ alignItems: 'center', padding: 24 }}>
                 <Ionicons name="time" size={64} color={C.accent} />
-                <Text style={[styles.h2, { marginTop: 10, textAlign: 'center' }]}>Paiement reçu, examen en cours</Text>
-                <Text style={[styles.muted, { textAlign: 'center', marginTop: 6 }]}>Notre équipe examine votre demande sous 48 heures. Vous recevrez une notification.</Text>
+                <Text style={[styles.h2, { marginTop: 10, textAlign: 'center' }]}>Paiement reçu, activation du badge</Text>
+                <Text style={[styles.muted, { textAlign: 'center', marginTop: 6 }]}>Votre badge vérifié s’active dans quelques instants. Vous recevrez une notification.</Text>
               </Card>
             </FadeIn>
           ) : (
             <>
               <FadeIn>
+                <BadgePreview name={profile?.fullName ?? 'Votre nom'} />
+              </FadeIn>
+              <FadeIn index={1}>
                 <Card style={{ padding: 18 }}>
                   {[
                     ['shield-checkmark-outline', 'Badge « Vérifié » sur votre profil'],
@@ -232,6 +235,49 @@ export default function Verification() {
           )}
         </ScrollView>
       )}
+    </View>
+  );
+}
+
+/** Aperçu de la carte du pro avec le badge vérifié, avant le paiement. */
+function BadgePreview({ name }: { name: string }) {
+  const glow = useState(() => new Animated.Value(0))[0];
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(glow, { toValue: 1, duration: 900, useNativeDriver: true }),
+        Animated.timing(glow, { toValue: 0, duration: 900, useNativeDriver: true }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [glow]);
+  return (
+    <View>
+      <Text style={{ fontFamily: F.bold, color: C.muted, fontSize: 12.5, marginBottom: 8, marginLeft: 4 }}>APERÇU DE VOTRE PROFIL APRÈS PAIEMENT</Text>
+      <Card style={{ flexDirection: 'row', alignItems: 'center', padding: 16, borderWidth: 2, borderColor: '#BFDBFE' }}>
+        <View style={{ width: 54, height: 54, borderRadius: 27, backgroundColor: C.primarySoft, alignItems: 'center', justifyContent: 'center' }}>
+          <Text style={{ fontFamily: F.displayHeavy, fontSize: 22, color: C.primary }}>{name.trim().charAt(0).toUpperCase() || 'B'}</Text>
+        </View>
+        <View style={{ flex: 1, marginLeft: 12 }}>
+          <View style={styles.row}>
+            <Text numberOfLines={1} style={{ fontFamily: F.display, fontSize: 16, color: C.text, flexShrink: 1 }}>{name}</Text>
+            <Animated.View style={{ marginLeft: 6, transform: [{ scale: glow.interpolate({ inputRange: [0, 1], outputRange: [1, 1.18] }) }] }}>
+              <Ionicons name="checkmark-circle" size={20} color={C.primary} />
+            </Animated.View>
+          </View>
+          <View style={[styles.row, { marginTop: 6, gap: 6 }]}>
+            <View style={[styles.row, { backgroundColor: C.primarySoft, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 3 }]}>
+              <Ionicons name="shield-checkmark" size={12} color={C.primary} />
+              <Text style={{ marginLeft: 4, fontFamily: F.heavy, fontSize: 11, color: C.primary }}>VÉRIFIÉ</Text>
+            </View>
+            <View style={[styles.row, { backgroundColor: '#DCFCE7', borderRadius: 999, paddingHorizontal: 8, paddingVertical: 3 }]}>
+              <Ionicons name="trending-up" size={12} color={C.success} />
+              <Text style={{ marginLeft: 4, fontFamily: F.heavy, fontSize: 11, color: C.success }}>RECOMMANDÉ</Text>
+            </View>
+          </View>
+        </View>
+      </Card>
     </View>
   );
 }

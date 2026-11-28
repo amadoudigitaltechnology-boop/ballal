@@ -1,9 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useState } from 'react';
 import { Alert, Animated, Modal, Pressable, ScrollView, Text, View } from 'react-native';
+import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button, FadeIn, Input, styles } from '@/components/ui';
+import { CITIES, flag } from '@/lib/geo';
 import { useSession } from '@/lib/session';
 import { friendlyError, supabase } from '@/lib/supabase';
 import { C, F } from '@/lib/theme';
@@ -35,9 +37,11 @@ export default function Setup() {
   const [source, setSource] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
-  const [step, setStep] = useState<1 | 2>(1);
+  const [step, setStep] = useState<1 | 2 | 3>(1);
   const [countries, setCountries] = useState<Country[]>([]);
-  const [country, setCountry] = useState('GN');
+  const [country, setCountry] = useState<string | null>(null);
+  const [city, setCity] = useState('');
+  const [district, setDistrict] = useState('');
   const [picker, setPicker] = useState(false);
 
   useEffect(() => {
@@ -47,19 +51,25 @@ export default function Setup() {
       .order('sort')
       .then(({ data }) => setCountries((data as Country[]) ?? []));
   }, []);
-  const countryName = countries.find((c) => c.code === country)?.name ?? 'Guinée';
+  const current = countries.find((c) => c.code === country);
   const scale = useState(() => new Animated.Value(0))[0];
 
-  const step1Ok = name.trim().length >= 2 && !!role;
-  const valid = step1Ok && accepted && source;
+  const step1Ok = name.trim().length >= 2 && !!country && city.trim().length >= 2 && district.trim().length >= 2;
+  const step2Ok = !!role;
+  const valid = step1Ok && step2Ok && accepted && !!source;
 
   const submit = async () => {
     if (!valid || !session) return;
     setLoading(true);
     try {
       const uid = session.user.id;
-      const patch: Record<string, unknown> = { full_name: name.trim(), referral_source: source };
-      if (countries.length) patch.country_code = country; // colonne présente dès que la liste des pays existe
+      const patch: Record<string, unknown> = {
+        full_name: name.trim(),
+        referral_source: source,
+        country_code: country,
+        city: city.trim(),
+        district: district.trim(),
+      };
       const e1 = (await supabase.from('profiles').update(patch).eq('id', uid)).error;
       if (e1) throw e1;
       await supabase.from('user_consents').insert([
@@ -71,8 +81,12 @@ export default function Setup() {
       setDone(true);
       Animated.spring(scale, { toValue: 1, useNativeDriver: true, bounciness: 12 }).start();
       // On ferme la fenêtre de succès AVANT de changer d'écran (sinon plantage Android).
-      setTimeout(() => setDone(false), 2200);
-      setTimeout(() => refresh(), 2600);
+      setTimeout(() => setDone(false), 2000);
+      setTimeout(async () => {
+        await refresh();
+        // Pro : on lui propose tout de suite de sponsoriser son profil (bouton « Plus tard » disponible).
+        if (role === 'professional') setTimeout(() => router.replace({ pathname: '/boost', params: { welcome: '1' } }), 400);
+      }, 2400);
     } catch (e) {
       Alert.alert('BALLAL', friendlyError(e));
     } finally {
@@ -85,39 +99,69 @@ export default function Setup() {
       <ScrollView contentContainerStyle={{ padding: 24, gap: 14 }} keyboardShouldPersistTaps="handled">
         {/* Barre de progression : étape 1 sur 2 */}
         <View style={[styles.row, { gap: 8 }]}>
-          {step === 2 ? (
-            <Pressable onPress={() => setStep(1)} hitSlop={10} style={{ marginRight: 4 }}>
+          {step > 1 ? (
+            <Pressable onPress={() => setStep(step === 3 ? 2 : 1)} hitSlop={10} style={{ marginRight: 4 }}>
               <Ionicons name="chevron-back" size={24} color={C.text} />
             </Pressable>
           ) : null}
-          {[1, 2].map((n) => (
+          {[1, 2, 3].map((n) => (
             <View key={n} style={{ flex: 1, height: 6, borderRadius: 3, backgroundColor: n <= step ? C.primary : C.border }} />
           ))}
-          <Text style={{ fontFamily: F.bold, color: C.muted, fontSize: 12.5, marginLeft: 4 }}>{step}/2</Text>
+          <Text style={{ fontFamily: F.bold, color: C.muted, fontSize: 12.5, marginLeft: 4 }}>{step}/3</Text>
         </View>
 
         {step === 1 ? (
-          <FadeIn key="s1" style={{ gap: 14 }}>
+          <FadeIn key="s1" style={{ gap: 12 }}>
             <View>
-              <Text style={[styles.h1, { fontSize: 28 }]}>Complétez votre profil</Text>
-              <Text style={[styles.muted, { marginTop: 6 }]}>Dites-nous qui vous êtes.</Text>
+              <Text style={[styles.h1, { fontSize: 28 }]}>Bienvenue sur Ballal</Text>
+              <Text style={[styles.muted, { marginTop: 6 }]}>Quelques infos pour vous montrer les pros près de chez vous.</Text>
             </View>
             <Text style={{ fontFamily: F.bold, marginTop: 4 }}>Nom complet</Text>
             <Input icon="person-outline" placeholder="Ex. : Mamadou Diallo" value={name} onChangeText={setName} autoCapitalize="words" />
-            {countries.length ? (
-              <>
-                <Text style={{ fontFamily: F.bold, marginTop: 4 }}>Votre pays</Text>
-                <Pressable onPress={() => setPicker(true)} style={[styles.row, { backgroundColor: C.field, borderRadius: 18, height: 52, paddingHorizontal: 16 }]}>
-                  <Ionicons name="earth-outline" size={20} color={C.muted} />
-                  <Text style={{ flex: 1, marginLeft: 10, fontFamily: F.semibold, fontSize: 15, color: C.text }}>{countryName}</Text>
-                  <Ionicons name="chevron-down" size={18} color={C.muted} />
-                </Pressable>
-              </>
+            <Text style={{ fontFamily: F.bold, marginTop: 4 }}>Pays</Text>
+            <Pressable
+              onPress={() => setPicker(true)}
+              style={[styles.row, { backgroundColor: C.field, borderRadius: 18, height: 56, paddingHorizontal: 16, borderWidth: 1.5, borderColor: country ? C.primary : 'transparent' }]}>
+              <Text style={{ fontSize: 26 }}>{current ? flag(current.code) : ''}</Text>
+              {!current ? <Ionicons name="earth-outline" size={22} color={C.muted} /> : null}
+              <Text style={{ flex: 1, marginLeft: 10, fontFamily: F.semibold, fontSize: 15, color: current ? C.text : C.muted }}>
+                {current ? current.name : 'Choisissez votre pays'}
+              </Text>
+              {current ? <Text style={[styles.muted, { marginRight: 8 }]}>{current.dial_code}</Text> : null}
+              <Ionicons name="chevron-down" size={18} color={C.muted} />
+            </Pressable>
+            {country ? (
+              <FadeIn style={{ gap: 10 }}>
+                <Text style={{ fontFamily: F.bold, marginTop: 4 }}>Ville</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+                  {(CITIES[country] ?? []).map((v) => {
+                    const on = city === v;
+                    return (
+                      <Pressable
+                        key={v}
+                        onPress={() => setCity(v)}
+                        style={{ paddingHorizontal: 14, paddingVertical: 9, borderRadius: 999, backgroundColor: on ? C.primary : C.field }}>
+                        <Text style={{ fontFamily: F.bold, fontSize: 13, color: on ? '#fff' : C.text }}>{v}</Text>
+                      </Pressable>
+                    );
+                  })}
+                </ScrollView>
+                <Input icon="business-outline" placeholder="Ou tapez votre ville" value={city} onChangeText={setCity} autoCapitalize="words" />
+                <Text style={{ fontFamily: F.bold, marginTop: 4 }}>Quartier</Text>
+                <Input icon="location-outline" placeholder="Ex. : Kipé, Ratoma" value={district} onChangeText={setDistrict} autoCapitalize="words" />
+              </FadeIn>
             ) : null}
-            <Text style={{ fontFamily: F.bold, marginTop: 4 }}>Vous êtes…</Text>
-            <RoleCard role={role} setRole={setRole} value="client" icon="search" title="Client" text="Je cherche des professionnels" />
-            <RoleCard role={role} setRole={setRole} value="professional" icon="construct" title="Professionnel" text="Je propose mes services" />
             <Button label="Continuer" icon="arrow-forward" onPress={() => step1Ok && setStep(2)} style={{ marginTop: 8, opacity: step1Ok ? 1 : 0.5 }} />
+          </FadeIn>
+        ) : step === 2 ? (
+          <FadeIn key="s2r" style={{ gap: 14 }}>
+            <View>
+              <Text style={[styles.h1, { fontSize: 28 }]}>Vous êtes…</Text>
+              <Text style={[styles.muted, { marginTop: 6 }]}>Vous pourrez changer plus tard.</Text>
+            </View>
+            <RoleCard role={role} setRole={setRole} value="client" icon="search" title="Client" text="Je cherche des professionnels" />
+            <RoleCard role={role} setRole={setRole} value="professional" icon="construct" title="Professionnel" text="Je propose mes services et je vends sur le Marketplace" />
+            <Button label="Continuer" icon="arrow-forward" onPress={() => step2Ok && setStep(3)} style={{ marginTop: 8, opacity: step2Ok ? 1 : 0.5 }} />
           </FadeIn>
         ) : (
           <FadeIn key="s2" style={{ gap: 14 }}>
@@ -144,7 +188,17 @@ export default function Setup() {
               <View style={{ width: 24, height: 24, borderRadius: 7, borderWidth: 2, borderColor: accepted ? C.primary : C.border, backgroundColor: accepted ? C.primary : '#fff', alignItems: 'center', justifyContent: 'center' }}>
                 {accepted ? <Ionicons name="checkmark" size={16} color="#fff" /> : null}
               </View>
-              <Text style={[styles.muted, { flex: 1, marginLeft: 10 }]}>J’accepte les conditions d’utilisation et la politique de confidentialité.</Text>
+              <Text style={[styles.muted, { flex: 1, marginLeft: 10 }]}>
+                J’accepte les{' '}
+                <Text style={{ color: C.primary, fontFamily: F.bold }} onPress={() => router.push({ pathname: '/legal', params: { doc: 'terms' } })}>
+                  conditions générales
+                </Text>{' '}
+                et la{' '}
+                <Text style={{ color: C.primary, fontFamily: F.bold }} onPress={() => router.push({ pathname: '/legal', params: { doc: 'privacy' } })}>
+                  politique de confidentialité
+                </Text>
+                .
+              </Text>
             </Pressable>
             <Button label="Continuer" icon="arrow-forward" onPress={submit} loading={loading} style={{ marginTop: 8, opacity: valid ? 1 : 0.5 }} />
           </FadeIn>
@@ -163,13 +217,12 @@ export default function Setup() {
                 <Pressable
                   key={c.code}
                   onPress={() => {
+                    if (c.code !== country) setCity('');
                     setCountry(c.code);
                     setPicker(false);
                   }}
                   style={[styles.row, { paddingHorizontal: 20, paddingVertical: 14, backgroundColor: on ? C.primarySoft : '#fff' }]}>
-                  <View style={{ width: 40, height: 28, borderRadius: 8, backgroundColor: on ? C.primary : C.field, alignItems: 'center', justifyContent: 'center' }}>
-                    <Text style={{ fontFamily: F.heavy, fontSize: 12, color: on ? '#fff' : C.muted }}>{c.code}</Text>
-                  </View>
+                  <Text style={{ fontSize: 28, width: 40 }}>{flag(c.code)}</Text>
                   <Text style={{ flex: 1, marginLeft: 12, fontFamily: on ? F.bold : F.semibold, fontSize: 15, color: C.text }}>{c.name}</Text>
                   <Text style={[styles.muted, { fontSize: 13 }]}>{c.dial_code}</Text>
                 </Pressable>

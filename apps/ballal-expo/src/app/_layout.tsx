@@ -28,7 +28,8 @@ function Guard() {
     const group = segments[0];
     const inAuth = group === '(auth)';
     // Retour de Google : l'écran login-callback finalise la connexion lui-même.
-    if (group === 'login-callback' || group === 'payment-return') return;
+    // Conditions générales : consultables à tout moment, même avant la création du compte.
+    if (group === 'login-callback' || group === 'payment-return' || group === 'legal') return;
     if (!session) {
       const target = onboardingSeen ? '/login' : '/welcome';
       if (!inAuth) router.replace(target);
@@ -59,6 +60,9 @@ function Guard() {
       <Stack.Screen name="pro/[id]" options={{ animation: 'fade_from_bottom' }} />
       <Stack.Screen name="market/[id]" options={{ animation: 'fade_from_bottom' }} />
       <Stack.Screen name="market/new" options={{ animation: 'slide_from_bottom' }} />
+      <Stack.Screen name="legal" options={{ animation: 'slide_from_bottom' }} />
+      <Stack.Screen name="assistant" options={{ animation: 'slide_from_bottom' }} />
+      <Stack.Screen name="boost" options={{ animation: 'fade_from_bottom' }} />
       <Stack.Screen name="chat/[id]" options={{ animation: 'slide_from_right', contentStyle: { backgroundColor: '#EEF3FC' } }} />
     </Stack>
   );

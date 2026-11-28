@@ -1,10 +1,13 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import { Linking, Pressable, ScrollView, Text, View } from 'react-native';
+import { useState } from 'react';
+import { LayoutAnimation, Linking, Pressable, ScrollView, Text, View } from 'react-native';
+import type { Href } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Card, FadeIn, styles } from '@/components/ui';
+import { Card, FadeIn, Pressy, styles } from '@/components/ui';
+import { FAQ, type Faq } from '@/lib/knowledge';
 import { C, F, brandGradient } from '@/lib/theme';
 
 const WHATSAPP = '224620657693';
@@ -62,8 +65,55 @@ export default function Support() {
             </Card>
           </FadeIn>
         ))}
-        <Text style={[styles.muted, { textAlign: 'center', fontSize: 12.5, marginTop: 8 }]}>Ballal est une application d’Amadou Technology, Conakry.</Text>
+        <Pressy onPress={() => router.push('/assistant')} style={[styles.row, { backgroundColor: C.primary, borderRadius: 20, padding: 16, marginTop: 4 }]}>
+          <Ionicons name="chatbubble-ellipses" size={24} color="#fff" />
+          <View style={{ flex: 1, marginLeft: 12 }}>
+            <Text style={{ fontFamily: F.display, color: '#fff', fontSize: 15.5 }}>Assistant Ballal</Text>
+            <Text style={{ fontFamily: F.medium, color: 'rgba(255,255,255,0.85)', fontSize: 13 }}>Une réponse immédiate, 24 h/24</Text>
+          </View>
+          <Ionicons name="arrow-forward" size={20} color="#fff" />
+        </Pressy>
+
+        <Text style={[styles.h3, { marginTop: 14 }]}>Questions fréquentes</Text>
+        {FAQ.map((f, i) => (
+          <FaqRow key={f.id} f={f} index={i} />
+        ))}
+
+        <Pressable onPress={() => router.push({ pathname: '/legal', params: { doc: 'terms' } })} style={{ alignSelf: 'center', marginTop: 10, padding: 8 }}>
+          <Text style={{ fontFamily: F.bold, color: C.primary, fontSize: 13.5 }}>Conditions générales et confidentialité</Text>
+        </Pressable>
+        <Text style={[styles.muted, { textAlign: 'center', fontSize: 12.5 }]}>Ballal est une application d’Amadou Technology, Conakry.</Text>
       </ScrollView>
     </View>
+  );
+}
+
+/** Question fréquente dépliable. */
+function FaqRow({ f, index }: { f: Faq; index: number }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <FadeIn index={index}>
+      <Pressable
+        onPress={() => {
+          LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+          setOpen(!open);
+        }}
+        style={[styles.card, { padding: 14 }]}>
+        <View style={styles.row}>
+          <Text style={{ flex: 1, fontFamily: F.bold, fontSize: 14.5, color: C.text }}>{f.q}</Text>
+          <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={18} color={C.muted} />
+        </View>
+        {open ? (
+          <View style={{ marginTop: 8, gap: 10 }}>
+            <Text style={{ fontFamily: F.body, fontSize: 14, lineHeight: 21, color: C.text }}>{f.a}</Text>
+            {f.link ? (
+              <Pressable onPress={() => router.push(f.link!.href as Href)}>
+                <Text style={{ fontFamily: F.bold, color: C.primary, fontSize: 13.5 }}>{f.link.label}</Text>
+              </Pressable>
+            ) : null}
+          </View>
+        ) : null}
+      </Pressable>
+    </FadeIn>
   );
 }

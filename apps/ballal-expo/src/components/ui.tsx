@@ -26,11 +26,21 @@ export function Logo({ height = 32 }: { height?: number }) {
 export function FadeIn({ children, index = 0, style }: { children: ReactNode; index?: number; style?: StyleProp<ViewStyle> }) {
   const v = useState(() => new Animated.Value(0))[0];
   useEffect(() => {
-    Animated.timing(v, { toValue: 1, duration: 380, delay: Math.min(index, 8) * 55, useNativeDriver: true }).start();
+    // Ressort doux : apparition plus vivante, sans à-coup.
+    Animated.spring(v, { toValue: 1, delay: Math.min(index, 8) * 60, useNativeDriver: true, speed: 14, bounciness: 6 }).start();
   }, [v, index]);
   return (
     <Animated.View
-      style={[style, { opacity: v, transform: [{ translateY: v.interpolate({ inputRange: [0, 1], outputRange: [16, 0] }) }] }]}>
+      style={[
+        style,
+        {
+          opacity: v.interpolate({ inputRange: [0, 0.6, 1], outputRange: [0, 1, 1], extrapolate: 'clamp' }),
+          transform: [
+            { translateY: v.interpolate({ inputRange: [0, 1], outputRange: [22, 0] }) },
+            { scale: v.interpolate({ inputRange: [0, 1], outputRange: [0.96, 1] }) },
+          ],
+        },
+      ]}>
       {children}
     </Animated.View>
   );
@@ -57,7 +67,7 @@ export function Pressy({
         Haptics.selectionAsync().catch(() => undefined);
         onPress?.();
       }}
-      onPressIn={() => to(0.96)}
+      onPressIn={() => to(0.94)}
       onPressOut={() => to(1)}>
       <Animated.View style={[style, { transform: [{ scale: s }] }]}>{children}</Animated.View>
     </Pressable>

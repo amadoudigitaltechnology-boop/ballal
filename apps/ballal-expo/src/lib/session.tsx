@@ -32,10 +32,17 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       return;
     }
     const uid = s.user.id;
-    const [p, r] = await Promise.all([
-      supabase.from('profiles').select('full_name, avatar_path, status').eq('id', uid).maybeSingle(),
-      supabase.from('user_roles').select('role').eq('user_id', uid),
-    ]);
+    // Réseau instable : jusqu'à 3 essais, pour ne jamais rester bloqué sur l'écran de connexion.
+    let p: { data: Record<string, unknown> | null; error: unknown } = { data: null, error: null };
+    let r: { data: { role: unknown }[] | null; error: unknown } = { data: null, error: null };
+    for (let i = 0; i < 3; i++) {
+      [p, r] = await Promise.all([
+        supabase.from('profiles').select('full_name, avatar_path, status').eq('id', uid).maybeSingle(),
+        supabase.from('user_roles').select('role').eq('user_id', uid),
+      ]);
+      if (!p.error && !r.error) break;
+      await new Promise((res) => setTimeout(res, 800 * (i + 1)));
+    }
     setProfile({
       fullName: (p.data?.full_name as string | null) ?? null,
       avatarPath: (p.data?.avatar_path as string | null) ?? null,
