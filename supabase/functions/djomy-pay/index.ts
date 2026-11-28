@@ -1,6 +1,7 @@
-// BALLAL — création d'un paiement Djomy (Orange Money, MTN MoMo, carte).
+// BALLAL — création d’un paiement (Djomy ou GeniusPay : Orange Money, MTN MoMo, Wave, carte).
 // Appelée par l'application avec le jeton de l'utilisateur. Le montant vient UNIQUEMENT des réglages serveur.
-// Secrets requis (Supabase > Edge Functions > Secrets) : DJOMY_CLIENT_ID, DJOMY_CLIENT_SECRET, DJOMY_BASE_URL.
+// Guinée → Djomy (GNF). Pays de app_settings.geniuspay_countries → GeniusPay (XOF).
+// Secrets : DJOMY_CLIENT_ID, DJOMY_CLIENT_SECRET, DJOMY_BASE_URL · GENIUSPAY_API_KEY, GENIUSPAY_API_SECRET.
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -12,6 +13,9 @@ const envFind = (exact: string, re: RegExp) =>
 const CLIENT_ID = envFind("DJOMY_CLIENT_ID", /^D?J[OA]?M[IY]_?CLIENT_?ID$/i);
 const BASE = (envFind("DJOMY_BASE_URL", /^D?J[OA]?M[IY]_?BASE_?URL$/i) || "https://sandbox-api.djomy.africa").replace(/\/+$/, "");
 const CLIENT_SECRET = envFind("DJOMY_CLIENT_SECRET", /^D?J[OA]?M[IY]_?CLIENT_?SECRETS?$/i);
+const GP_KEY = envFind("GENIUSPAY_API_KEY", /^GENIUS_?PAY_?API_?KEY$/i);
+const GP_SECRET = envFind("GENIUSPAY_API_SECRET", /^GENIUS_?PAY_?API_?SECRETS?$/i);
+const GP_BASE = "https://geniuspay.ci/api/v1/merchant";
 
 const json = (status: number, body: unknown) =>
   new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json", "Cache-Control": "no-store" } });
@@ -43,20 +47,30 @@ async function djomyHeaders(withToken: boolean): Promise<Record<string, string>>
 
 Deno.serve(async (req) => {
   if (req.method !== "POST") return json(405, { error: "method_not_allowed" });
-  if (!CLIENT_ID || !CLIENT_SECRET) {
-    console.warn("DJOMY secrets introuvables. Noms vus :", Object.entries(ENV).filter(([k]) => /OMY|OMI|CLIENT/i.test(k)).map(([k, v]) => `[${k}]=${v.trim() ? "rempli" : "VIDE"}`).join(", ") || "aucun");
-    return json(503, { error: "payment_not_configured" });
-  }
-
   // Utilisateur authentifié (jeton Supabase vérifié par le serveur).
   const jwt = (req.headers.get("Authorization") ?? "").replace(/^Bearer\s+/i, "");
   const { data: auth } = await supa.auth.getUser(jwt);
   const user = auth?.user;
   if (!user) return json(401, { error: "unauthorized" });
 
-  // Djomy : paiement en ligne disponible en Guinée uniquement pour le moment.
+  // Choix du prestataire selon le pays : Guinée → Djomy, autres pays listés → GeniusPay.
   const { data: prof } = await supa.from("profiles").select("country_code").eq("id", user.id).maybeSingle();
-  if (prof?.country_code && prof.country_code !== "GN") return json(403, { error: "country_not_supported" });
+  const country = (prof?.country_code as string | null) ?? "GN";
+  let provider: "djomy" | "geniuspay";
+  if (country === "GN") provider = "djomy";
+  else {
+    const { data: gc } = await supa.from("app_settings").select("value").eq("key", "geniuspay_countries").maybeSingle();
+    if (!(Array.isArray(gc?.value) && gc!.value.includes(country))) return json(403, { error: "country_not_supported" });
+    provider = "geniuspay";
+  }
+  if (provider === "djomy" && (!CLIENT_ID || !CLIENT_SECRET)) {
+    console.warn("DJOMY secrets introuvables. Noms vus :", Object.entries(ENV).filter(([k]) => /OMY|OMI|CLIENT/i.test(k)).map(([k, v]) => `[${k}]=${v.trim() ? "rempli" : "VIDE"}`).join(", ") || "aucun");
+    return json(503, { error: "payment_not_configured" });
+  }
+  if (provider === "geniuspay" && (!GP_KEY || !GP_SECRET)) {
+    console.warn("GENIUSPAY secrets introuvables. Noms vus :", Object.entries(ENV).filter(([k]) => /GENIUS/i.test(k)).map(([k, v]) => `[${k}]=${v.trim() ? "rempli" : "VIDE"}`).join(", ") || "aucun");
+    return json(503, { error: "payment_not_configured" });
+  }
 
   let input: { verification_id?: string; purpose?: string; days?: number } = {};
   try {
@@ -103,12 +117,57 @@ Deno.serve(async (req) => {
     row = { user_id: user.id, purpose: "verification", verification_id: verificationId, amount_gnf: amount };
   }
 
-  const { data: pay, error: insErr } = await supa
-    .from("payments")
-    .insert(row)
-    .select("id")
-    .single();
-  if (insErr || !pay) return json(500, { error: "payment_create_failed" });
+  // Montant facturé : GNF pour Djomy, converti en XOF (arrondi à la centaine, minimum 200) pour GeniusPay.
+  let currency = "GNF";
+  let charged = amount;
+  if (provider === "geniuspay") {
+    const { data: r } = await supa.from("app_settings").select("value").eq("key", "gnf_per_xof").maybeSingle();
+    const rate = Number(r?.value) > 0 ? Number(r!.value) : 15;
+    currency = "XOF";
+    charged = Math.max(200, Math.ceil(amount / rate / 100) * 100);
+  }
+  row = { ...row, provider, currency, amount_charged: charged };
+
+  const { data: pay, error: insErr } = await supa.from("payments").insert(row).select("id").single();
+  if (insErr || !pay) {
+    console.error("payment insert", insErr?.message);
+    return json(500, { error: "payment_create_failed" });
+  }
+
+  if (provider === "geniuspay") {
+    try {
+      const back = `${SUPABASE_URL}/functions/v1/geniuspay-webhook?ref=${pay.id}`;
+      const { data: u } = await supa.from("profiles").select("full_name").eq("id", user.id).maybeSingle();
+      const res = await fetch(`${GP_BASE}/payments`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json", "X-API-Key": GP_KEY, "X-API-Secret": GP_SECRET },
+        body: JSON.stringify({
+          amount: charged,
+          currency: "XOF",
+          description,
+          customer: { name: (u?.full_name as string | null) ?? undefined, email: user.email ?? undefined, country },
+          success_url: back,
+          error_url: `${back}&cancel=1`,
+          metadata: { payment_id: pay.id, user_id: user.id },
+        }),
+      });
+      const body = await res.json().catch(() => ({}));
+      const d = body?.data ?? body;
+      const redirectUrl: string | undefined = d?.checkout_url ?? d?.payment_url;
+      const reference: string | undefined = d?.reference;
+      if (!res.ok || !redirectUrl || !reference) {
+        console.error("geniuspay create", res.status, JSON.stringify(body).slice(0, 300));
+        await supa.from("payments").update({ status: "failed", updated_at: new Date().toISOString() }).eq("id", pay.id);
+        return json(502, { error: "gateway_error" });
+      }
+      await supa.from("payments").update({ redirect_url: redirectUrl, provider_reference: reference, updated_at: new Date().toISOString() }).eq("id", pay.id);
+      return json(200, { payment_id: pay.id, redirect_url: redirectUrl, amount: charged, currency });
+    } catch (e) {
+      console.error("geniuspay", String(e));
+      await supa.from("payments").update({ status: "failed", updated_at: new Date().toISOString() }).eq("id", pay.id);
+      return json(502, { error: "gateway_error" });
+    }
+  }
 
   try {
     const back = `${SUPABASE_URL}/functions/v1/djomy-webhook?ref=${pay.id}`;
@@ -136,7 +195,7 @@ Deno.serve(async (req) => {
       return json(502, { error: "gateway_error" });
     }
     await supa.from("payments").update({ redirect_url: redirectUrl, provider_tx_id: tx ?? null, updated_at: new Date().toISOString() }).eq("id", pay.id);
-    return json(200, { payment_id: pay.id, redirect_url: redirectUrl, amount_gnf: amount });
+    return json(200, { payment_id: pay.id, redirect_url: redirectUrl, amount: charged, currency });
   } catch (e) {
     console.error("djomy", String(e));
     await supa.from("payments").update({ status: "failed", updated_at: new Date().toISOString() }).eq("id", pay.id);

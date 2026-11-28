@@ -8,16 +8,17 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button, Card, FadeIn, styles } from '@/components/ui';
 import { startPayment } from '@/lib/api';
+import { useMoney } from '@/lib/money';
 import { useSession } from '@/lib/session';
 import { supabase } from '@/lib/supabase';
 import { C, F } from '@/lib/theme';
 
 const RETURN_URL = 'com.amadoutechnology.ballal://payment-return';
 type Plan = { days: number; price_gnf: number };
-const gnf = (n: number) => `${Math.round(n).toLocaleString('fr-FR').replace(/\s/g, ' ')} GNF`;
 
 /** Sponsoriser son profil : en tête des résultats et de l'accueil, avec la mention « Sponsorisé ». */
 export default function Boost() {
+  const gnf = useMoney();
   const insets = useSafeAreaInsets();
   const { session } = useSession();
   const uid = session?.user.id ?? '';
@@ -127,7 +128,7 @@ export default function Boost() {
                   </View>
                   <View style={{ flex: 1, marginLeft: 12 }}>
                     <Text style={{ fontFamily: F.display, fontSize: 16, color: C.text }}>{p.days} jours</Text>
-                    <Text style={[styles.muted, { fontSize: 12.5 }]}>{gnf(p.price_gnf / p.days)} par jour</Text>
+                    <Text style={[styles.muted, { fontSize: 12.5 }]}>{gnf(p.price_gnf / p.days, true)} par jour</Text>
                   </View>
                   {p.days === 7 ? (
                     <View style={{ backgroundColor: C.accentSoft, borderRadius: 10, paddingHorizontal: 8, paddingVertical: 3, marginRight: 8 }}>
@@ -141,7 +142,7 @@ export default function Boost() {
           })}
 
           <Button label={busy || `Payer ${selected ? gnf(selected.price_gnf) : ''}`} icon="lock-closed" variant="accent" onPress={pay} loading={!!busy} style={{ marginTop: 6 }} />
-          <Text style={[styles.muted, { textAlign: 'center', fontSize: 12 }]}>Orange Money, MTN MoMo ou carte. Paiement traité par Djomy.</Text>
+          <Text style={[styles.muted, { textAlign: 'center', fontSize: 12 }]}>Orange Money, MTN MoMo, Wave ou carte. Paiement sécurisé.</Text>
         </ScrollView>
       )}
     </View>

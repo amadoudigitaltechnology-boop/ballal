@@ -11,6 +11,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button, Card, FadeIn, Input, styles } from '@/components/ui';
 import { startPayment } from '@/lib/api';
+import { useMoney } from '@/lib/money';
 import { useSession } from '@/lib/session';
 import { friendlyError, supabase } from '@/lib/supabase';
 import { C, F } from '@/lib/theme';
@@ -19,10 +20,10 @@ const RETURN_URL = 'com.amadoutechnology.ballal://payment-return';
 
 type Doc = { id: string; status: 'pending' | 'approved' | 'rejected'; payment_reference: string | null; rejection_reason: string | null; doc_type: string };
 
-const gnf = (n: number) => `${Math.round(n).toLocaleString('fr-FR').replace(/\s/g, ' ')} GNF`;
 
 /** Vérification du compte : informations sur l'entreprise (RCCM et pièce d'identité facultatifs) + paiement Djomy. */
 export default function Verification() {
+  const gnf = useMoney();
   const insets = useSafeAreaInsets();
   const { session } = useSession();
   const uid = session?.user.id ?? '';
@@ -219,14 +220,14 @@ export default function Verification() {
               )}
 
               <View style={[styles.row, { gap: 8, justifyContent: 'center' }]}>
-                {['Orange Money', 'MTN MoMo', 'Carte'].map((m) => (
+                {['Orange Money', 'MTN MoMo', 'Wave', 'Carte'].map((m) => (
                   <View key={m} style={{ backgroundColor: '#fff', borderRadius: 12, paddingHorizontal: 10, paddingVertical: 6, borderWidth: 1, borderColor: C.border }}>
                     <Text style={{ fontFamily: F.semibold, fontSize: 12, color: C.text }}>{m}</Text>
                   </View>
                 ))}
               </View>
               <Button label={busy || `Payer ${fee ? gnf(fee) : ''}`} icon="lock-closed" onPress={submitAndPay} loading={!!busy} />
-              <Text style={[styles.muted, { textAlign: 'center', fontSize: 12 }]}>Paiement traité par Djomy. Ballal ne voit jamais vos codes.</Text>
+              <Text style={[styles.muted, { textAlign: 'center', fontSize: 12 }]}>Paiement sécurisé (Djomy ou GeniusPay). Ballal ne voit jamais vos codes.</Text>
             </>
           )}
         </ScrollView>
